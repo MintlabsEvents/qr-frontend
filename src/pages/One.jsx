@@ -8,16 +8,15 @@ const One = () => {
   const [showScanner, setShowScanner] = useState(false);
   const [alreadyAttended, setAlreadyAttended] = useState(false);
   const html5QrCodeRef = useRef(null);
-const printContainerRef = useRef(null);
+  const printContainerRef = useRef(null);
+
   const stopCameraScanner = () => {
     if (html5QrCodeRef.current) {
-      html5QrCodeRef.current.stop()
-        .then(() => {
-          html5QrCodeRef.current.clear();
-          html5QrCodeRef.current = null;
-          setShowScanner(false);
-        })
-        .catch(err => console.warn('Stop error:', err));
+      html5QrCodeRef.current.stop().then(() => {
+        html5QrCodeRef.current.clear();
+        html5QrCodeRef.current = null;
+        setShowScanner(false);
+      }).catch(err => console.warn('Stop error:', err));
     } else {
       setShowScanner(false);
     }
@@ -28,81 +27,29 @@ const printContainerRef = useRef(null);
     setTimeout(() => setAlreadyAttended(false), 5000);
   };
 
-  // const handlePrint = async (user) => {
-  //   const qrBase64 = await QRCode.toDataURL(user.qrCodeData);
-  //   const win = window.open('', '_blank');
-  //   if (!win) {
-  //     alert('Popup blocked.');
-  //     return;
-  //   }
+  const handlePrint = async (user) => {
+    const qrBase64 = await QRCode.toDataURL(user.qrCodeData);
+    const printContainer = printContainerRef.current;
 
-  //   win.document.write(`
-  //     <html>
-  //       <head>
-  //         <title>Print</title>
-  //         <style>
-  //           @page { size: 9.5cm 13.7cm; margin: 0; }
-  //           body {
-  //             margin: 0; padding: 0;
-  //             font-family: Arial, sans-serif;
-  //             width: 100%; height: 100%;
-  //             display: flex; justify-content: center; align-items: flex-start;
-  //           }
-  //           .badge {
-  //             width: 100%;
-  //             padding-top: 6.5cm;
-  //             display: flex; flex-direction: column;
-  //             align-items: center; box-sizing: border-box;
-  //           }
-  //           .qr img { width: 90px; height: 90px; margin-bottom: 10px; }
-  //           .name { font-size: 24px; font-weight: bold; margin-bottom: 4px; text-align: center; }
-  //           .org { font-size: 14px; text-align: center; }
-  //         </style>
-  //       </head>
-  //       <body>
-  //         <div class="badge">
-  //           <div class="qr"><img src="${qrBase64}" /></div>
-  //           <div class="name">${user.name}</div>
-  //           <div class="org">${user.organization}</div>
-  //         </div>
-  //       </body>
-  //     </html>
-  //   `);
+    if (!printContainer) return;
 
-  //   win.document.close();
-  //   win.focus();
-  //   setTimeout(() => {
-  //     win.print();
-  //     win.close();
-  //   }, 300);
-  // };
-
-
-
-const handlePrint = async (user) => {
-  const qrBase64 = await QRCode.toDataURL(user.qrCodeData);
-  const printContainer = printContainerRef.current;
-
-  if (!printContainer) return;
-
-  printContainer.innerHTML = `
-    <div class="print-sheet">
-      <div class="badge">
-        <div class="qr"><img src="${qrBase64}" /></div>
-        <div class="name">${user.name}</div>
-        <div class="org">${user.organization}</div>
+    printContainer.innerHTML = `
+      <div class="print-sheet">
+        <div class="badge">
+          <div class="qr"><img src="${qrBase64}" /></div>
+          <div class="name">${user.name}</div>
+          <div class="org">${user.organization}</div>
+        </div>
       </div>
-    </div>
-  `;
+    `;
 
-  setTimeout(() => {
-    window.print();
-  }, 300);
-};
+    setTimeout(() => {
+      window.print();
+    }, 300);
+  };
 
   const processQRCode = async (decodedText) => {
     try {
-      // STEP 1: Check if already attended
       const checkRes = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/check-attendance`, {
         qrCodeData: decodedText
       });
@@ -115,7 +62,6 @@ const handlePrint = async (user) => {
         return;
       }
 
-      // STEP 2: Mark attendance and print
       const markRes = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/attendance/day1`, {
         qrCodeData: decodedText
       });
@@ -157,24 +103,23 @@ const handlePrint = async (user) => {
 
   const handleBarcodeGun = () => {
     stopCameraScanner();
-   let buffer = '';
-const onKey = (e) => {
-  if (e.key === 'Enter') {
-    document.removeEventListener('keydown', onKey);
-     processQRCode(buffer.trim()); 
-    buffer = '';
-  } else if (e.key.length === 1) {
-    buffer += e.key;
-  }
-};
-document.addEventListener('keydown', onKey);
-
+    let buffer = '';
+    const onKey = (e) => {
+      if (e.key === 'Enter') {
+        document.removeEventListener('keydown', onKey);
+        processQRCode(buffer.trim());
+        buffer = '';
+      } else if (e.key.length === 1) {
+        buffer += e.key;
+      }
+    };
+    document.addEventListener('keydown', onKey);
   };
 
   return (
     <div className="one-container">
       <div className="one-main">
-        <h2>Day 1 Check-In</h2>
+        {/* This section is hidden in print */}
         <div className="scanner-options">
           <button onClick={handleBarcodeGun}>Scan Using Barcode Scanner</button>
           <button onClick={startCameraScanner}>Scan Using Camera</button>
@@ -192,73 +137,73 @@ document.addEventListener('keydown', onKey);
           </div>
         )}
 
-        <div ref={printContainerRef} id="print-badge" style={{ display: 'flex', justifyContent: 'center', marginTop: 40 }} />
+        <div ref={printContainerRef} id="print-badge" />
 
-      {/* Style included for the print badge layout */}
-<style>{`
-  @media print {
-    body {
-      margin: 0;
-      padding: 0;
-    }
+        <style>{`
+          @media print {
+            body {
+              margin: 0;
+              padding: 0;
+            }
 
-    @page {
-      size: 9.5cm 13.7cm;
-      margin: 0;
-    }
+            @page {
+              size: 9.5cm 13.5cm;
+              margin: 0;
+            }
 
-    #print-badge {
-      display: block;
-      width: 9.5cm;
-      height: 13.7cm;
-      overflow: hidden;
-      page-break-after: avoid;
-    }
+            #print-badge {
+              display: block;
+              width: 9.5cm;
+              height: 13.5cm;
+              overflow: hidden;
+              page-break-after: avoid;
+            }
 
-    .print-sheet {
-      position: relative;
-      width: 100%;
-      height: 100%;
-      box-sizing: border-box;
-      padding-top: 6.5cm;
-    }
+            .print-sheet {
+              position: relative;
+              width: 100%;
+              height: 100%;
+              box-sizing: border-box;
+              padding-top: 6.5cm;
+              display: flex;
+              justify-content: center;
+              align-items: flex-start;
+            }
 
-    .badge {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
+            .badge {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              width: 100%;
+            }
 
-    .qr img {
-      width: 90px;
-      height: 90px;
-      margin-bottom: 10px;
-    }
+            .qr img {
+              width: 90px;
+              height: 90px;
+              margin-bottom: 10px;
+            }
 
-    .name {
-      font-size: 24px;
-      font-weight: bold;
-      margin-bottom: 4px;
-      text-align: center;
-    }
+            .name {
+              font-size: 24px;
+              font-weight: bold;
+              margin-bottom: 4px;
+              text-align: center;
+            }
 
-    .org {
-      font-size: 14px;
-      text-align: center;
-    }
+            .org {
+              font-size: 14px;
+              text-align: center;
+            }
 
-    button, .scanner-options, #scanner, .scanner-status-text {
-      display: none !important;
-    }
-  }
+            button, .scanner-options, #scanner, .scanner-status-text {
+              display: none !important;
+            }
+          }
 
-  /* On-screen layout */
-  #print-badge {
-    display: none; /* Hide on screen, only show for print */
-  }
-`}</style>
-
-
+          #print-badge {
+            display: none; /* Hide on screen, only show during print */
+          }
+        `}</style>
       </div>
     </div>
   );
