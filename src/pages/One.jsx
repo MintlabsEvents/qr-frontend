@@ -84,15 +84,16 @@ const printContainerRef = useRef(null);
     const printContainer = printContainerRef.current;
 
     if (!printContainer) return;
+    
+printContainer.innerHTML = `
+  <div class="badge">
+    <div class="qr"><img src="${qrBase64}" /></div>
+    <div class="name">${user.name}</div>
+    <div class="org">${user.organization}</div>
+    <button onclick="window.print()" style="margin-top:20px;padding:8px 16px;font-size:16px;">Print</button>
+  </div>
+`;
 
-    printContainer.innerHTML = `
-      <div class="badge">
-        <div class="qr"><img src="${qrBase64}" /></div>
-        <div class="name">${user.name}</div>
-        <div class="org">${user.organization}</div>
-        <button onclick="window.print()" style="margin-top:20px;padding:8px 16px;font-size:16px;">Print</button>
-      </div>
-    `;
 
     // Optional: Scroll to print badge area
     printContainer.scrollIntoView({ behavior: 'smooth' });
@@ -193,46 +194,70 @@ document.addEventListener('keydown', onKey);
         <div ref={printContainerRef} id="print-badge" style={{ display: 'flex', justifyContent: 'center', marginTop: 40 }} />
 
       {/* Style included for the print badge layout */}
-      <style>{`
-        @media print {
-          button { display: none !important; }
-          @page {
-            size: 9.5cm 13.7cm;
-            margin: 0;
-          }
-          body {
-            margin: 0;
-          }
-        }
+<style>{`
+  @media print {
+    body {
+      margin: 0;
+      padding: 0;
+    }
 
-        .badge {
-          width: 100%;
-          max-width: 300px;
-          padding-top: 6.5cm;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          font-family: Arial, sans-serif;
-        }
+    @page {
+      size: 9.5cm 13.7cm;
+      margin: 0;
+    }
 
-        .qr img {
-          width: 90px;
-          height: 90px;
-          margin-bottom: 10px;
-        }
+    #print-badge {
+      position: relative;
+      width: 9.5cm;
+      height: 13.7cm;
+      overflow: hidden;
+      page-break-after: avoid;
+    }
 
-        .name {
-          font-size: 24px;
-          font-weight: bold;
-          margin-bottom: 4px;
-          text-align: center;
-        }
+    button {
+      display: none !important;
+    }
+  }
 
-        .org {
-          font-size: 14px;
-          text-align: center;
-        }
-      `}</style>
+  #print-badge {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 6.5cm;
+    box-sizing: border-box;
+    width: 9.5cm;
+    height: 13.7cm;
+    margin: 0 auto;
+  }
+
+  .badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    height: auto;
+    box-sizing: border-box;
+  }
+
+  .qr img {
+    width: 90px;
+    height: 90px;
+    margin-bottom: 10px;
+  }
+
+  .name {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 4px;
+    text-align: center;
+  }
+
+  .org {
+    font-size: 14px;
+    text-align: center;
+  }
+`}</style>
+
       </div>
     </div>
   );
