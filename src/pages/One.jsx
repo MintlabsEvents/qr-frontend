@@ -7,6 +7,7 @@ import './One.css';
 const One = () => {
   const [showScanner, setShowScanner] = useState(false);
   const [alreadyAttended, setAlreadyAttended] = useState(false);
+  const [printHtml, setPrintHtml] = useState('');
   const html5QrCodeRef = useRef(null);
   const printContainerRef = useRef(null);
 
@@ -29,25 +30,78 @@ const One = () => {
     setTimeout(() => setAlreadyAttended(false), 5000);
   };
 
-  const handlePrint = async (user) => {
-    const qrBase64 = await QRCode.toDataURL(user.qrCodeData);
-    const printContainer = printContainerRef.current;
-    if (!printContainer) return;
+const handlePrint = async (user) => {
+  const qrBase64 = await QRCode.toDataURL(user.qrCodeData);
 
-    printContainer.innerHTML = `
-      <div class="print-sheet">
+  const printWindow = window.open('', '_blank', 'width=400,height=600');
+  if (!printWindow) {
+    alert('Popup blocked.');
+    return;
+  }
+
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Print</title>
+        <style>
+          @page {
+            size: 9.5cm 13.5cm;
+            margin: 0;
+          }
+          body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+          }
+          .badge {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+          }
+          .qr img {
+            width: 90px;
+            height: 90px;
+            margin-bottom: 10px;
+          }
+          .name {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 4px;
+            text-align: center;
+          }
+          .org {
+            font-size: 14px;
+            text-align: center;
+          }
+        </style>
+      </head>
+      <body>
         <div class="badge">
           <div class="qr"><img src="${qrBase64}" /></div>
           <div class="name">${user.name}</div>
           <div class="org">${user.organization}</div>
         </div>
-      </div>
-    `;
+      </body>
+    </html>
+  `);
 
-    setTimeout(() => {
-      window.print();
-    }, 300);
+  printWindow.document.close();
+  printWindow.focus();
+
+  // Wait for image to load
+  printWindow.onload = () => {
+    printWindow.print();
+    setTimeout(() => printWindow.close(), 200);
   };
+};
+
 
   const processQRCode = async (decodedText) => {
     try {
@@ -138,9 +192,14 @@ const One = () => {
         )}
       </div>
 
-      <div ref={printContainerRef} id="print-badge" />
+      {/* ✅ Print zone */}
+      <div
+        ref={printContainerRef}
+        id="print-badge"
+        dangerouslySetInnerHTML={{ __html: printHtml }}
+      />
 
-      {/* Print styles */}
+      {/* ✅ Print Styles */}
       <style>{`
         @media print {
           body {
@@ -200,7 +259,7 @@ const One = () => {
           }
         }
 
-        /* Screen-only: hide print area */
+        /* Hide print badge on screen */
         #print-badge {
           display: none;
         }
