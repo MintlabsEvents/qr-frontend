@@ -30,70 +30,27 @@ const One = () => {
     setTimeout(() => setAlreadyAttended(false), 5000);
   };
 
-const handlePrint = async (user) => {
-  const qrBase64 = await QRCode.toDataURL(user.qrCodeData);
+  const handlePrint = async (user) => {
+    const qrBase64 = await QRCode.toDataURL(user.qrCodeData);
 
-  const printContainer = document.createElement('div');
-  printContainer.innerHTML = `
-    <div id="custom-print-area">
-      <style>
-        @page {
-          size: 9.5cm 13.5cm;
-          margin: 0;
-        }
-        body {
-          margin: 0;
-          padding: 0;
-        }
-        #custom-print-area {
-          width: 9.5cm;
-          height: 13.5cm;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          flex-direction: column;
-          font-family: Arial, sans-serif;
-        }
-        .qr img {
-          width: 90px;
-          height: 90px;
-          margin-bottom: 10px;
-        }
-        .name {
-          font-size: 24px;
-          font-weight: bold;
-          text-align: center;
-        }
-        .org {
-          font-size: 14px;
-          text-align: center;
-        }
-      </style>
-      <div class="qr"><img src="${qrBase64}" /></div>
-      <div class="name">${user.name}</div>
-      <div class="org">${user.organization}</div>
-    </div>
-  `;
+    setPrintHtml(`
+      <div class="custom-print-area">
+        <div class="qr"><img id="qr-image" src="${qrBase64}" /></div>
+        <div class="name">${user.name}</div>
+        <div class="org">${user.organization}</div>
+      </div>
+    `);
 
-  document.body.appendChild(printContainer);
-
-  // Hide everything else for printing
-  const originalBody = document.body.innerHTML;
-  const printHTML = printContainer.innerHTML;
-
-  document.body.innerHTML = printHTML;
-
-  window.focus();
-  window.print();
-
-  // Restore original body after print
-  setTimeout(() => {
-    document.body.innerHTML = originalBody;
-    location.reload(); // Refresh to restore event listeners
-  }, 500);
-};
-
-
+    // Wait for image to fully load before printing
+    setTimeout(() => {
+      const img = document.getElementById('qr-image');
+      if (img.complete) {
+        window.print();
+      } else {
+        img.onload = () => window.print();
+      }
+    }, 500);
+  };
 
   const processQRCode = async (decodedText) => {
     try {
@@ -184,76 +141,52 @@ const handlePrint = async (user) => {
         )}
       </div>
 
-      {/* ✅ Print zone */}
+      {/* Printable hidden area */}
       <div
         ref={printContainerRef}
-        id="print-badge"
         dangerouslySetInnerHTML={{ __html: printHtml }}
+        style={{ position: 'absolute', top: '-9999px', left: '-9999px' }}
       />
 
-      {/* ✅ Print Styles */}
+      {/* Print-specific CSS (cleanly embedded) */}
       <style>{`
         @media print {
-          body {
-            margin: 0;
-            padding: 0;
+          body * {
+            visibility: hidden;
           }
-
+          .custom-print-area, .custom-print-area * {
+            visibility: visible;
+          }
+          .custom-print-area {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 9.5cm;
+            height: 13.5cm;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-family: Arial, sans-serif;
+          }
           @page {
             size: 9.5cm 13.5cm;
             margin: 0;
           }
-
-          .one-container, .one-main, .scanner-options, #scanner, .scanner-status-text, .popup-message {
-            display: none !important;
-          }
-
-          #print-badge {
-            display: block;
-            width: 9.5cm;
-            height: 13.5cm;
-            overflow: hidden;
-            page-break-after: avoid;
-          }
-
-          .print-sheet {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            box-sizing: border-box;
-          }
-
-          .badge {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            width: 100%;
-          }
-
           .qr img {
             width: 90px;
             height: 90px;
             margin-bottom: 10px;
           }
-
           .name {
             font-size: 24px;
             font-weight: bold;
-            margin-bottom: 4px;
             text-align: center;
           }
-
           .org {
             font-size: 14px;
             text-align: center;
           }
-        }
-
-        /* Hide print badge on screen */
-        #print-badge {
-          display: none;
         }
       `}</style>
     </div>
