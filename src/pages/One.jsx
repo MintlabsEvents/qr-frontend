@@ -8,7 +8,7 @@ const One = () => {
   const [showScanner, setShowScanner] = useState(false);
   const [alreadyAttended, setAlreadyAttended] = useState(false);
   const html5QrCodeRef = useRef(null);
-
+const printContainerRef = useRef(null);
   const stopCameraScanner = () => {
     if (html5QrCodeRef.current) {
       html5QrCodeRef.current.stop()
@@ -28,53 +28,74 @@ const One = () => {
     setTimeout(() => setAlreadyAttended(false), 5000);
   };
 
+  // const handlePrint = async (user) => {
+  //   const qrBase64 = await QRCode.toDataURL(user.qrCodeData);
+  //   const win = window.open('', '_blank');
+  //   if (!win) {
+  //     alert('Popup blocked.');
+  //     return;
+  //   }
+
+  //   win.document.write(`
+  //     <html>
+  //       <head>
+  //         <title>Print</title>
+  //         <style>
+  //           @page { size: 9.5cm 13.7cm; margin: 0; }
+  //           body {
+  //             margin: 0; padding: 0;
+  //             font-family: Arial, sans-serif;
+  //             width: 100%; height: 100%;
+  //             display: flex; justify-content: center; align-items: flex-start;
+  //           }
+  //           .badge {
+  //             width: 100%;
+  //             padding-top: 6.5cm;
+  //             display: flex; flex-direction: column;
+  //             align-items: center; box-sizing: border-box;
+  //           }
+  //           .qr img { width: 90px; height: 90px; margin-bottom: 10px; }
+  //           .name { font-size: 24px; font-weight: bold; margin-bottom: 4px; text-align: center; }
+  //           .org { font-size: 14px; text-align: center; }
+  //         </style>
+  //       </head>
+  //       <body>
+  //         <div class="badge">
+  //           <div class="qr"><img src="${qrBase64}" /></div>
+  //           <div class="name">${user.name}</div>
+  //           <div class="org">${user.organization}</div>
+  //         </div>
+  //       </body>
+  //     </html>
+  //   `);
+
+  //   win.document.close();
+  //   win.focus();
+  //   setTimeout(() => {
+  //     win.print();
+  //     win.close();
+  //   }, 300);
+  // };
+
+
+
   const handlePrint = async (user) => {
     const qrBase64 = await QRCode.toDataURL(user.qrCodeData);
-    const win = window.open('', '_blank');
-    if (!win) {
-      alert('Popup blocked.');
-      return;
-    }
+    const printContainer = printContainerRef.current;
 
-    win.document.write(`
-      <html>
-        <head>
-          <title>Print</title>
-          <style>
-            @page { size: 9.5cm 13.7cm; margin: 0; }
-            body {
-              margin: 0; padding: 0;
-              font-family: Arial, sans-serif;
-              width: 100%; height: 100%;
-              display: flex; justify-content: center; align-items: flex-start;
-            }
-            .badge {
-              width: 100%;
-              padding-top: 6.5cm;
-              display: flex; flex-direction: column;
-              align-items: center; box-sizing: border-box;
-            }
-            .qr img { width: 90px; height: 90px; margin-bottom: 10px; }
-            .name { font-size: 24px; font-weight: bold; margin-bottom: 4px; text-align: center; }
-            .org { font-size: 14px; text-align: center; }
-          </style>
-        </head>
-        <body>
-          <div class="badge">
-            <div class="qr"><img src="${qrBase64}" /></div>
-            <div class="name">${user.name}</div>
-            <div class="org">${user.organization}</div>
-          </div>
-        </body>
-      </html>
-    `);
+    if (!printContainer) return;
 
-    win.document.close();
-    win.focus();
-    setTimeout(() => {
-      win.print();
-      win.close();
-    }, 300);
+    printContainer.innerHTML = `
+      <div class="badge">
+        <div class="qr"><img src="${qrBase64}" /></div>
+        <div class="name">${user.name}</div>
+        <div class="org">${user.organization}</div>
+        <button onclick="window.print()" style="margin-top:20px;padding:8px 16px;font-size:16px;">Print</button>
+      </div>
+    `;
+
+    // Optional: Scroll to print badge area
+    printContainer.scrollIntoView({ behavior: 'smooth' });
   };
 
   const processQRCode = async (decodedText) => {
@@ -168,6 +189,50 @@ document.addEventListener('keydown', onKey);
             <p>Already Attended</p>
           </div>
         )}
+
+        <div ref={printContainerRef} id="print-badge" style={{ display: 'flex', justifyContent: 'center', marginTop: 40 }} />
+
+      {/* Style included for the print badge layout */}
+      <style>{`
+        @media print {
+          button { display: none !important; }
+          @page {
+            size: 9.5cm 13.7cm;
+            margin: 0;
+          }
+          body {
+            margin: 0;
+          }
+        }
+
+        .badge {
+          width: 100%;
+          max-width: 300px;
+          padding-top: 6.5cm;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          font-family: Arial, sans-serif;
+        }
+
+        .qr img {
+          width: 90px;
+          height: 90px;
+          margin-bottom: 10px;
+        }
+
+        .name {
+          font-size: 24px;
+          font-weight: bold;
+          margin-bottom: 4px;
+          text-align: center;
+        }
+
+        .org {
+          font-size: 14px;
+          text-align: center;
+        }
+      `}</style>
       </div>
     </div>
   );

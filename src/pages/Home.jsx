@@ -10,7 +10,7 @@ import QRCode from 'qrcode';
 const Home = () => {
   const [isSideNavOpen, setIsSideNavOpen] = useState(false);
   const [showRegistrationForm, setShowRegistrationForm] = useState(false);
-  const [showUserDetails, setShowUserDetails] = useState(false);
+  const [showUserDetails, ] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
