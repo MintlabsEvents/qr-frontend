@@ -171,97 +171,104 @@ document.addEventListener('keydown', onKey);
 
   };
 
-  return (
-    <div className="one-container">
-      <div className="one-main">
-        <h2>Day 1 Check-In</h2>
-        <div className="scanner-options">
-          <button onClick={handleBarcodeGun}>Scan Using Barcode Scanner</button>
-          <button onClick={startCameraScanner}>Scan Using Camera</button>
-        </div>
+return (
+  <div className="one-container">
+    {/* All UI, buttons, scanner, etc. */}
+    <div className="one-main">
+      {/* REMOVE THIS LINE COMPLETELY */}
+      {/* <h2>Day 1 Check-In</h2> */}
 
-        {showScanner ? (
-          <div id="scanner" className="camera-box"></div>
-        ) : (
-          <p className="scanner-status-text">Ready for barcode scan</p>
-        )}
-
-        {alreadyAttended && (
-          <div className="popup-message">
-            <p>Already Attended</p>
-          </div>
-        )}
-
-        <div ref={printContainerRef} id="print-badge" style={{ display: 'flex', justifyContent: 'center', marginTop: 40 }} />
-
-      {/* Style included for the print badge layout */}
-<style>{`
-  @media print {
-    body {
-      margin: 0;
-      padding: 0;
-    }
-
-    @page {
-      size: 9.5cm 13.7cm;
-      margin: 0;
-    }
-
-    #print-badge {
-      display: block;
-      width: 9.5cm;
-      height: 13.7cm;
-      overflow: hidden;
-      page-break-after: avoid;
-    }
-
-    .print-sheet {
-      position: relative;
-      width: 100%;
-      height: 100%;
-      box-sizing: border-box;
-      padding-top: 6.5cm;
-    }
-
-    .badge {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    .qr img {
-      width: 90px;
-      height: 90px;
-      margin-bottom: 10px;
-    }
-
-    .name {
-      font-size: 24px;
-      font-weight: bold;
-      margin-bottom: 4px;
-      text-align: center;
-    }
-
-    .org {
-      font-size: 14px;
-      text-align: center;
-    }
-
-    button, .scanner-options, #scanner, .scanner-status-text {
-      display: none !important;
-    }
-  }
-
-  /* On-screen layout */
-  #print-badge {
-    display: none; /* Hide on screen, only show for print */
-  }
-`}</style>
-
-
+      <div className="scanner-options">
+        <button onClick={handleBarcodeGun}>Scan Using Barcode Scanner</button>
+        <button onClick={startCameraScanner}>Scan Using Camera</button>
       </div>
+
+      {showScanner ? (
+        <div id="scanner" className="camera-box"></div>
+      ) : (
+        <p className="scanner-status-text">Ready for barcode scan</p>
+      )}
+
+      {alreadyAttended && (
+        <div className="popup-message">
+          <p>Already Attended</p>
+        </div>
+      )}
     </div>
-  );
+
+    {/* ✅ OUTSIDE .one-main, separate print zone */}
+    <div ref={printContainerRef} id="print-badge" />
+
+    {/* ✅ Print-specific styles */}
+    <style>{`
+      @media print {
+        body {
+          margin: 0;
+          padding: 0;
+        }
+
+        @page {
+          size: 9.5cm 13.5cm;
+          margin: 0;
+        }
+
+        .one-container, .one-main, .scanner-options, #scanner, .scanner-status-text, .popup-message {
+          display: none !important;
+        }
+
+        #print-badge {
+          display: block;
+          width: 9.5cm;
+          height: 13.5cm;
+          overflow: hidden;
+          page-break-after: avoid;
+        }
+
+        .print-sheet {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          box-sizing: border-box;
+          padding-top: 6.5cm;
+          display: flex;
+          justify-content: center;
+          align-items: flex-start;
+        }
+
+        .badge {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          width: 100%;
+        }
+
+        .qr img {
+          width: 90px;
+          height: 90px;
+          margin-bottom: 10px;
+        }
+
+        .name {
+          font-size: 24px;
+          font-weight: bold;
+          margin-bottom: 4px;
+          text-align: center;
+        }
+
+        .org {
+          font-size: 14px;
+          text-align: center;
+        }
+      }
+
+      /* On-screen hide print area */
+      #print-badge {
+        display: none;
+      }
+    `}</style>
+  </div>
+);
+
 };
 
 export default One;
