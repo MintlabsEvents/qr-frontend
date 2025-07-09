@@ -33,74 +33,66 @@ const One = () => {
 const handlePrint = async (user) => {
   const qrBase64 = await QRCode.toDataURL(user.qrCodeData);
 
-  const printWindow = window.open('', '_blank', 'width=400,height=600');
-  if (!printWindow) {
-    alert('Popup blocked.');
-    return;
-  }
+  const printContainer = document.createElement('div');
+  printContainer.innerHTML = `
+    <div id="custom-print-area">
+      <style>
+        @page {
+          size: 9.5cm 13.5cm;
+          margin: 0;
+        }
+        body {
+          margin: 0;
+          padding: 0;
+        }
+        #custom-print-area {
+          width: 9.5cm;
+          height: 13.5cm;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          flex-direction: column;
+          font-family: Arial, sans-serif;
+        }
+        .qr img {
+          width: 90px;
+          height: 90px;
+          margin-bottom: 10px;
+        }
+        .name {
+          font-size: 24px;
+          font-weight: bold;
+          text-align: center;
+        }
+        .org {
+          font-size: 14px;
+          text-align: center;
+        }
+      </style>
+      <div class="qr"><img src="${qrBase64}" /></div>
+      <div class="name">${user.name}</div>
+      <div class="org">${user.organization}</div>
+    </div>
+  `;
 
-  printWindow.document.write(`
-    <html>
-      <head>
-        <title>Print</title>
-        <style>
-          @page {
-            size: 9.5cm 13.5cm;
-            margin: 0;
-          }
-          body {
-            margin: 0;
-            padding: 0;
-            font-family: Arial, sans-serif;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-          }
-          .badge {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            width: 100%;
-            height: 100%;
-          }
-          .qr img {
-            width: 90px;
-            height: 90px;
-            margin-bottom: 10px;
-          }
-          .name {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 4px;
-            text-align: center;
-          }
-          .org {
-            font-size: 14px;
-            text-align: center;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="badge">
-          <div class="qr"><img src="${qrBase64}" /></div>
-          <div class="name">${user.name}</div>
-          <div class="org">${user.organization}</div>
-        </div>
-      </body>
-    </html>
-  `);
+  document.body.appendChild(printContainer);
 
-  printWindow.document.close();
-  printWindow.focus();
+  // Hide everything else for printing
+  const originalBody = document.body.innerHTML;
+  const printHTML = printContainer.innerHTML;
 
-  // Wait for image to load
-  printWindow.onload = () => {
-    printWindow.print();
-    setTimeout(() => printWindow.close(), 200);
-  };
+  document.body.innerHTML = printHTML;
+
+  window.focus();
+  window.print();
+
+  // Restore original body after print
+  setTimeout(() => {
+    document.body.innerHTML = originalBody;
+    location.reload(); // Refresh to restore event listeners
+  }, 500);
 };
+
 
 
   const processQRCode = async (decodedText) => {
