@@ -134,17 +134,18 @@ const One = () => {
 
   const handleBarcodeGun = () => {
     stopCameraScanner();
-    let buffer = '';
-    const onKey = (e) => {
-      if (e.key === 'Enter') {
-        document.removeEventListener('keydown', onKey);
-        processQRCode(buffer);
-        buffer = '';
-      } else {
-        buffer += e.key;
-      }
-    };
-    document.addEventListener('keydown', onKey);
+   let buffer = '';
+const onKey = (e) => {
+  if (e.key === 'Enter') {
+    document.removeEventListener('keydown', onKey);
+     processQRCode(buffer.trim()); 
+    buffer = '';
+  } else if (e.key.length === 1) {
+    buffer += e.key;
+  }
+};
+document.addEventListener('keydown', onKey);
+
   };
 
   return (
