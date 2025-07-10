@@ -7,6 +7,7 @@ import './One.css';
 const One = () => {
   const [showScanner, setShowScanner] = useState(false);
   const [alreadyAttended, setAlreadyAttended] = useState(false);
+  const printContainerRef = useRef(null);
   const html5QrCodeRef = useRef(null);
 
   const stopCameraScanner = () => {
@@ -15,7 +16,7 @@ const One = () => {
         html5QrCodeRef.current.clear();
         html5QrCodeRef.current = null;
         setShowScanner(false);
-      }).catch(console.warn);
+      }).catch(err => console.warn('Stop error:', err));
     } else {
       setShowScanner(false);
     }
@@ -26,140 +27,74 @@ const One = () => {
     setTimeout(() => setAlreadyAttended(false), 5000);
   };
 
-const handlePrint = async (user) => {
-  try {
+  const handlePrint = async (user) => {
     const qrBase64 = await QRCode.toDataURL(user.qrCodeData);
-    const printWindow = window.open('', '_blank', 'width=600,height=600');
+    const printHTML = `
+      <div class="print-container">
+        <div class="print-content">
+          <img src="${qrBase64}" class="qr-code" alt="QR Code"/>
+          <h2 class="user-name">${user.name}</h2>
+          <p class="user-org">${user.organization}</p>
+        </div>
+      </div>
+    `;
 
-    if (!printWindow) {
-      alert('Popup blocked — please allow popups for this site');
-      return;
-    }
-
-    const html = `
-      <!DOCTYPE html>
+    const printWindow = window.open('', '_blank');
+    printWindow.document.open();
+    printWindow.document.write(`
       <html>
       <head>
-        <title>Badge: ${user.name}</title>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Print User Details</title>
         <style>
-          * {
-            box-sizing: border-box;
+          body {
             margin: 0;
             padding: 0;
-          }
-          body {
             font-family: Arial, sans-serif;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            padding: 20px;
+            height: 100vh;
+          }
+          .print-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
             text-align: center;
-          }
-          .badge {
-            border: 1px solid #ddd;
-            padding: 20px;
-            border-radius: 5px;
-            max-width: 100%;
-          }
-          .qr-container {
-            margin: 0 auto 15px;
           }
           .qr-code {
             width: 120px;
             height: 120px;
+            margin-bottom: 15px;
           }
-          .name {
+          .user-name {
             font-size: 24px;
-            font-weight: bold;
             margin-bottom: 5px;
           }
-          .org {
-            font-size: 18px;
-            color: #555;
+          .user-org {
+            font-size: 16px;
+            margin-top: 0;
           }
           @media print {
             body {
-              height: auto;
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-            }
-            @page {
-              size: auto;
-              margin: 5mm;
-            }
-            .badge {
-              border: none;
-              padding: 0;
+              -webkit-print-color-adjust: exact;
             }
           }
         </style>
       </head>
       <body>
-        <div class="badge">
-          <div class="qr-container">
-            <img class="qr-code" src="${qrBase64}" 
-                 alt="QR Code" 
-                 onload="window.qrLoaded = true;" />
-          </div>
-          <div class="name">${user.name}</div>
-          <div class="org">${user.organization}</div>
-        </div>
-
+        ${printHTML}
         <script>
-          let printAttempts = 0;
-          const maxPrintAttempts = 5;
-
-          function checkAndPrint() {
-            printAttempts++;
-            
-            if (window.qrLoaded) {
-              // Focus window for better print reliability
-              window.focus();
-              
-              // Small delay before printing
-              setTimeout(() => {
-                window.print();
-              }, 300);
-            } else if (printAttempts < maxPrintAttempts) {
-              setTimeout(checkAndPrint, 300);
-            } else {
-              console.error('QR code failed to load after multiple attempts');
-              alert('Printing failed - please try again');
-            }
-          }
-
-          // Start the print process after everything loads
-          window.addEventListener('load', () => {
-            // Extra delay for HP printer compatibility
-            setTimeout(checkAndPrint, 1000);
-          });
-
-          // Close window after printing
-          window.onafterprint = () => {
-            setTimeout(() => {
-              window.close();
-            }, 500);
+          window.onload = () => {
+            window.print();
+            window.onafterprint = () => window.close();
           };
         </script>
       </body>
       </html>
-    `;
-
-    printWindow.document.open();
-    printWindow.document.write(html);
+    `);
     printWindow.document.close();
-
-  } catch (error) {
-    console.error('Printing error:', error);
-    alert('Error generating print preview. Please try again.');
-  }
-};
-
-
+  };
 
   const processQRCode = async (decodedText) => {
     try {
@@ -181,9 +116,9 @@ const handlePrint = async (user) => {
 
       const updatedUser = markRes.data.user;
       if (updatedUser) handlePrint(updatedUser);
-      else alert('Attendance marking failed');
+      else alert('Attendance failed');
     } catch (err) {
-      console.error(err);
+      console.error('Error:', err);
       alert('Invalid QR Code');
     }
   };
@@ -208,7 +143,8 @@ const handlePrint = async (user) => {
       html5QrCode.start(
         { facingMode: 'environment' },
         config,
-        handleScanFromCamera
+        handleScanFromCamera,
+        err => console.warn('QR scan error', err)
       ).catch(err => alert('Camera error: ' + err));
     }, 300);
   };
@@ -248,6 +184,9 @@ const handlePrint = async (user) => {
           </div>
         )}
       </div>
+
+      {/* Hidden div for future reference if needed */}
+      <div ref={printContainerRef} style={{ display: 'none' }} />
     </div>
   );
 };
