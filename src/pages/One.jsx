@@ -54,7 +54,7 @@ const handlePrint = async (user) => {
               flex-direction: column;
               align-items: center;
               justify-content: flex-start;
-              padding-top: 6.5cm;
+              padding-top: 7cm;
               padding-left:-5px;
               box-sizing: border-box;
               text-align: center;
