@@ -70,21 +70,32 @@ const handlePrint = async (user) => {
           body {
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
+            height: auto;
+          }
+          @page {
+            size: auto;
+            margin: 0;
           }
         }
       </style>
     </head>
     <body>
-      <img class="qr" src="${qrBase64}" alt="QR Code" />
+      <img class="qr" src="${qrBase64}" alt="QR Code" onload="window.qrLoaded = true;" />
       <div class="name">${user.name}</div>
       <div class="org">${user.organization}</div>
 
       <script>
-        window.onload = () => {
-          // Give HP Smart time to hook the DOM
-          setTimeout(() => {
+        function attemptPrint() {
+          if (window.qrLoaded) {
             window.print();
-          }, 1000);
+          } else {
+            setTimeout(attemptPrint, 200);
+          }
+        }
+        
+        window.onload = () => {
+          // Longer delay for HP printers
+          setTimeout(attemptPrint, 1500);
         };
 
         window.onafterprint = () => {
