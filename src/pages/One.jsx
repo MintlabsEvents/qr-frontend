@@ -80,14 +80,17 @@ const handlePrint = async (user) => {
         </head>
         <body>
           <div class="print-page">
-            <img class="qr" src="${qrBase64}" />
+            <img id="qrImage" class="qr" src="${qrBase64}" />
             <div class="name">${user.name}</div>
             <div class="org">${user.organization}</div>
           </div>
           <script>
-            window.onload = function () {
+            const img = document.getElementById('qrImage');
+            img.onload = function () {
               window.print();
-              window.onafterprint = () => window.close();
+            };
+            window.onafterprint = () => {
+              window.close();
             };
           </script>
         </body>
@@ -96,7 +99,7 @@ const handlePrint = async (user) => {
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
-      alert('Popup blocked. Please allow popups.');
+      alert('Popup blocked. Please allow popups for this site.');
       return;
     }
 
@@ -108,6 +111,7 @@ const handlePrint = async (user) => {
     alert('Failed to generate badge');
   }
 };
+
 
 
 
