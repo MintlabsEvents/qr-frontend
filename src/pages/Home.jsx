@@ -105,7 +105,6 @@ const handleFileUpload = async (e) => {
   const file = e.target.files[0];
   if (!file) return;
 
-  // Check if the file is an Excel file
   if (!file.name.match(/\.(xlsx|xls)$/)) {
     alert('Please upload an Excel file (.xlsx or .xls)');
     return;
@@ -116,8 +115,9 @@ const handleFileUpload = async (e) => {
 
   try {
     setIsUploading(true);
+
     const response = await axios.post(
-      `${import.meta.env.VITE_API_BASE_URL}/api/upload-excel`, 
+      `${import.meta.env.VITE_API_BASE_URL}/api/upload-excel`,
       formData,
       {
         headers: {
@@ -126,27 +126,33 @@ const handleFileUpload = async (e) => {
         timeout: 30000 // 30 seconds timeout
       }
     );
+
     setUsers(response.data);
     setFilteredUsers(response.data);
     alert('File uploaded successfully!');
+
   } catch (error) {
     console.error('Error uploading file:', error);
+
     let errorMessage = 'Error uploading file';
+
     if (error.response) {
       errorMessage = error.response.data.error || errorMessage;
-      if (error.response.data.details) {
-        console.error('Server error details:', error.response.data.details);
-      }
+      console.error('Server error details:', error.response.data);
     } else if (error.request) {
       errorMessage = 'No response from server';
+      console.error('Request error:', error.request);
     } else {
       errorMessage = error.message;
     }
+
     alert(errorMessage);
+
   } finally {
     setIsUploading(false);
   }
 };
+
 
 
 
@@ -172,6 +178,18 @@ const handleExportExcel = async () => {
     alert('Failed to export Excel.');
   }
 };
+const handleReset = async () => {
+  if (!window.confirm("Are you sure you want to reset all attendance records?")) return;
+
+  try {
+    const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/reset-attendance`);
+    alert(response.data.message || 'Attendance reset successfully!');
+  } catch (error) {
+    console.error('Reset error:', error);
+    alert(error.response?.data?.error || 'Failed to reset attendance');
+  }
+};
+
 
   return (
     <div className="home-container">
@@ -201,6 +219,7 @@ const handleExportExcel = async () => {
           <button className="btn btn-primary" onClick={toggleSideNav} aria-controls="#sidenav-1" aria-haspopup="true">
             <FaBars />
           </button>
+          
 
           <div className="search-bar">
             <FaSearch className="search-icon" />
@@ -212,7 +231,11 @@ const handleExportExcel = async () => {
             />
           </div>
 
+           
           <div className="header-actions">
+             <button className="btn btn-export" onClick={handleReset}>
+              Reset All
+            </button>
             <button className="btn btn-export" onClick={handleExportExcel}>
               <FaDownload /> Export Excel
             </button>
