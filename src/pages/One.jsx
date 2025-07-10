@@ -26,36 +26,35 @@ const One = () => {
     setTimeout(() => setAlreadyAttended(false), 5000);
   };
 
-  const handlePrint = async (user) => {
-    const qrBase64 = await QRCode.toDataURL(user.qrCodeData);
+const handlePrint = async (user) => {
+  const qrBase64 = await QRCode.toDataURL(user.qrCodeData);
+  const printWindow = window.open('', '_blank');
 
-    const printWindow = window.open('', '_blank', 'width=400,height=600');
-
-    const htmlContent = `
-      <html>
+  const html = `
+    <html>
       <head>
-        <title>Print User Badge</title>
+        <title>Print Badge</title>
         <style>
           body {
             margin: 0;
             padding: 0;
             font-family: Arial, sans-serif;
             display: flex;
-            flex-direction: column;
-            align-items: center;
             justify-content: center;
+            align-items: center;
             height: 100vh;
+            flex-direction: column;
           }
           .qr {
-            width: 120px;
-            height: 120px;
-            margin-bottom: 15px;
+            width: 100px;
+            height: 100px;
+            margin-bottom: 10px;
           }
           .name {
             font-size: 22px;
             font-weight: bold;
+            margin-bottom: 4px;
             text-align: center;
-            margin-bottom: 5px;
           }
           .org {
             font-size: 16px;
@@ -69,26 +68,34 @@ const One = () => {
         </style>
       </head>
       <body>
-        <img src="${qrBase64}" class="qr" alt="QR Code"/>
+        <img id="qr-img" class="qr" src="${qrBase64}" alt="QR" />
         <div class="name">${user.name}</div>
         <div class="org">${user.organization}</div>
 
         <script>
-          window.onload = () => {
-            window.print();
+          const img = document.getElementById('qr-img');
+          img.onload = () => {
+            setTimeout(() => {
+              window.print();
+            }, 300);
           };
+          // Fallback in case onload doesn't fire (some Android browsers)
+          setTimeout(() => {
+            if (document.readyState === 'complete') window.print();
+          }, 1000);
           window.onafterprint = () => {
             window.close();
           };
         </script>
       </body>
-      </html>
-    `;
+    </html>
+  `;
 
-    printWindow.document.open();
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
-  };
+  printWindow.document.open();
+  printWindow.document.write(html);
+  printWindow.document.close();
+};
+
 
   const processQRCode = async (decodedText) => {
     try {
