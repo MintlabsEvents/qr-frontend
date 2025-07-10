@@ -7,19 +7,16 @@ import './One.css';
 const One = () => {
   const [showScanner, setShowScanner] = useState(false);
   const [alreadyAttended, setAlreadyAttended] = useState(false);
-  const [printHtml, setPrintHtml] = useState('');
-  const html5QrCodeRef = useRef(null);
   const printContainerRef = useRef(null);
+  const html5QrCodeRef = useRef(null);
 
   const stopCameraScanner = () => {
     if (html5QrCodeRef.current) {
-      html5QrCodeRef.current.stop()
-        .then(() => {
-          html5QrCodeRef.current.clear();
-          html5QrCodeRef.current = null;
-          setShowScanner(false);
-        })
-        .catch(err => console.warn('Stop error:', err));
+      html5QrCodeRef.current.stop().then(() => {
+        html5QrCodeRef.current.clear();
+        html5QrCodeRef.current = null;
+        setShowScanner(false);
+      }).catch(err => console.warn('Stop error:', err));
     } else {
       setShowScanner(false);
     }
@@ -32,24 +29,71 @@ const One = () => {
 
   const handlePrint = async (user) => {
     const qrBase64 = await QRCode.toDataURL(user.qrCodeData);
-
-    setPrintHtml(`
-      <div class="custom-print-area">
-        <div class="qr"><img id="qr-image" src="${qrBase64}" /></div>
-        <div class="name">${user.name}</div>
-        <div class="org">${user.organization}</div>
+    const printHTML = `
+      <div class="print-container">
+        <div class="print-content">
+          <img src="${qrBase64}" class="qr-code" alt="QR Code"/>
+          <h2 class="user-name">${user.name}</h2>
+          <p class="user-org">${user.organization}</p>
+        </div>
       </div>
-    `);
+    `;
 
-    // Wait for image to fully load before printing
-    setTimeout(() => {
-      const img = document.getElementById('qr-image');
-      if (img.complete) {
-        window.print();
-      } else {
-        img.onload = () => window.print();
-      }
-    }, 500);
+    const printWindow = window.open('', '_blank');
+    printWindow.document.open();
+    printWindow.document.write(`
+      <html>
+      <head>
+        <title>Print User Details</title>
+        <style>
+          body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+          }
+          .print-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            text-align: center;
+          }
+          .qr-code {
+            width: 120px;
+            height: 120px;
+            margin-bottom: 15px;
+          }
+          .user-name {
+            font-size: 24px;
+            margin-bottom: 5px;
+          }
+          .user-org {
+            font-size: 16px;
+            margin-top: 0;
+          }
+          @media print {
+            body {
+              -webkit-print-color-adjust: exact;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        ${printHTML}
+        <script>
+          window.onload = () => {
+            window.print();
+            window.onafterprint = () => window.close();
+          };
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   const processQRCode = async (decodedText) => {
@@ -141,54 +185,8 @@ const One = () => {
         )}
       </div>
 
-      {/* Printable hidden area */}
-      <div
-        ref={printContainerRef}
-        dangerouslySetInnerHTML={{ __html: printHtml }}
-        style={{ position: 'absolute', top: '-9999px', left: '-9999px' }}
-      />
-
-      {/* Print-specific CSS (cleanly embedded) */}
-      <style>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          .custom-print-area, .custom-print-area * {
-            visibility: visible;
-          }
-          .custom-print-area {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 9.5cm;
-            height: 13.5cm;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            font-family: Arial, sans-serif;
-          }
-          @page {
-            size: 9.5cm 13.5cm;
-            margin: 0;
-          }
-          .qr img {
-            width: 90px;
-            height: 90px;
-            margin-bottom: 10px;
-          }
-          .name {
-            font-size: 24px;
-            font-weight: bold;
-            text-align: center;
-          }
-          .org {
-            font-size: 14px;
-            text-align: center;
-          }
-        }
-      `}</style>
+      {/* Hidden div for future reference if needed */}
+      <div ref={printContainerRef} style={{ display: 'none' }} />
     </div>
   );
 };
