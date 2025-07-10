@@ -27,88 +27,136 @@ const One = () => {
   };
 
 const handlePrint = async (user) => {
-  const qrBase64 = await QRCode.toDataURL(user.qrCodeData);
-  const printWindow = window.open('', '_blank');
+  try {
+    const qrBase64 = await QRCode.toDataURL(user.qrCodeData);
+    const printWindow = window.open('', '_blank', 'width=600,height=600');
 
-  if (!printWindow) {
-    alert('Popup blocked — please allow popups for this site');
-    return;
-  }
+    if (!printWindow) {
+      alert('Popup blocked — please allow popups for this site');
+      return;
+    }
 
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Print Badge</title>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <style>
-        body {
-          margin: 0;
-          padding: 0;
-          font-family: Arial, sans-serif;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-          height: 100vh;
-          text-align: center;
-        }
-        img.qr {
-          width: 90px;
-          height: 90px;
-          margin-bottom: 10px;
-        }
-        .name {
-          font-size: 22px;
-          font-weight: bold;
-          margin-bottom: 4px;
-        }
-        .org {
-          font-size: 16px;
-        }
-        @media print {
-          body {
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-            height: auto;
-          }
-          @page {
-            size: auto;
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Badge: ${user.name}</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          * {
+            box-sizing: border-box;
             margin: 0;
+            padding: 0;
           }
-        }
-      </style>
-    </head>
-    <body>
-      <img class="qr" src="${qrBase64}" alt="QR Code" onload="window.qrLoaded = true;" />
-      <div class="name">${user.name}</div>
-      <div class="org">${user.organization}</div>
-
-      <script>
-        function attemptPrint() {
-          if (window.qrLoaded) {
-            window.print();
-          } else {
-            setTimeout(attemptPrint, 200);
+          body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            text-align: center;
           }
-        }
-        
-        window.onload = () => {
-          // Longer delay for HP printers
-          setTimeout(attemptPrint, 1500);
-        };
+          .badge {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 5px;
+            max-width: 100%;
+          }
+          .qr-container {
+            margin: 0 auto 15px;
+          }
+          .qr-code {
+            width: 120px;
+            height: 120px;
+          }
+          .name {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+          }
+          .org {
+            font-size: 18px;
+            color: #555;
+          }
+          @media print {
+            body {
+              height: auto;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            @page {
+              size: auto;
+              margin: 5mm;
+            }
+            .badge {
+              border: none;
+              padding: 0;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="badge">
+          <div class="qr-container">
+            <img class="qr-code" src="${qrBase64}" 
+                 alt="QR Code" 
+                 onload="window.qrLoaded = true;" />
+          </div>
+          <div class="name">${user.name}</div>
+          <div class="org">${user.organization}</div>
+        </div>
 
-        window.onafterprint = () => {
-          setTimeout(() => window.close(), 500);
-        };
-      </script>
-    </body>
-    </html>
-  `;
+        <script>
+          let printAttempts = 0;
+          const maxPrintAttempts = 5;
 
-  printWindow.document.open();
-  printWindow.document.write(html);
-  printWindow.document.close();
+          function checkAndPrint() {
+            printAttempts++;
+            
+            if (window.qrLoaded) {
+              // Focus window for better print reliability
+              window.focus();
+              
+              // Small delay before printing
+              setTimeout(() => {
+                window.print();
+              }, 300);
+            } else if (printAttempts < maxPrintAttempts) {
+              setTimeout(checkAndPrint, 300);
+            } else {
+              console.error('QR code failed to load after multiple attempts');
+              alert('Printing failed - please try again');
+            }
+          }
+
+          // Start the print process after everything loads
+          window.addEventListener('load', () => {
+            // Extra delay for HP printer compatibility
+            setTimeout(checkAndPrint, 1000);
+          });
+
+          // Close window after printing
+          window.onafterprint = () => {
+            setTimeout(() => {
+              window.close();
+            }, 500);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+
+  } catch (error) {
+    console.error('Printing error:', error);
+    alert('Error generating print preview. Please try again.');
+  }
 };
 
 
