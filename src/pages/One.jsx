@@ -7,7 +7,9 @@ import './One.css';
 const One = () => {
   const [showScanner, setShowScanner] = useState(false);
   const [alreadyAttended, setAlreadyAttended] = useState(false);
+  const [printHtml, setPrintHtml] = useState('');
   const html5QrCodeRef = useRef(null);
+  const printContainerRef = useRef(null);
 
   const stopCameraScanner = () => {
     if (html5QrCodeRef.current) {
@@ -31,66 +33,23 @@ const One = () => {
   const handlePrint = async (user) => {
     const qrBase64 = await QRCode.toDataURL(user.qrCodeData);
 
-    const printWindow = window.open('', '_self');
-    if (!printWindow) {
-      alert('Popup blocked.');
-      return;
-    }
-
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Print</title>
-          <style>
-            body {
-              margin: 0;
-              padding: 0;
-              display: flex;
-              justify-content: center;
-              align-items: center;
-              height: 100vh;
-              font-family: Arial, sans-serif;
-            }
-            .badge {
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-            }
-            .qr img {
-              width: 90px;
-              height: 90px;
-              margin-bottom: 10px;
-            }
-            .name {
-              font-size: 24px;
-              font-weight: bold;
-              text-align: center;
-            }
-            .org {
-              font-size: 14px;
-              text-align: center;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="badge">
-            <div class="qr"><img src="${qrBase64}" /></div>
-            <div class="name">${user.name}</div>
-            <div class="org">${user.organization}</div>
-          </div>
-          <script>
-            window.onload = function() {
-              setTimeout(() => {
-                window.print();
-                window.location.reload(); // Reset back to scanner after print
-              }, 300);
-            }
-          </script>
-        </body>
-      </html>
+    setPrintHtml(`
+      <div class="custom-print-area">
+        <div class="qr"><img id="qr-image" src="${qrBase64}" /></div>
+        <div class="name">${user.name}</div>
+        <div class="org">${user.organization}</div>
+      </div>
     `);
 
-    printWindow.document.close();
+    // Wait for image to fully load before printing
+    setTimeout(() => {
+      const img = document.getElementById('qr-image');
+      if (img.complete) {
+        window.print();
+      } else {
+        img.onload = () => window.print();
+      }
+    }, 500);
   };
 
   const processQRCode = async (decodedText) => {
@@ -181,6 +140,55 @@ const One = () => {
           </div>
         )}
       </div>
+
+      {/* Printable hidden area */}
+      <div
+        ref={printContainerRef}
+        dangerouslySetInnerHTML={{ __html: printHtml }}
+        style={{ position: 'absolute', top: '-9999px', left: '-9999px' }}
+      />
+
+      {/* Print-specific CSS (cleanly embedded) */}
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          .custom-print-area, .custom-print-area * {
+            visibility: visible;
+          }
+          .custom-print-area {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 9.5cm;
+            height: 13.5cm;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-family: Arial, sans-serif;
+          }
+          @page {
+            size: 9.5cm 13.5cm;
+            margin: 0;
+          }
+          .qr img {
+            width: 90px;
+            height: 90px;
+            margin-bottom: 10px;
+          }
+          .name {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+          }
+          .org {
+            font-size: 14px;
+            text-align: center;
+          }
+        }
+      `}</style>
     </div>
   );
 };
