@@ -27,74 +27,97 @@ const One = () => {
     setTimeout(() => setAlreadyAttended(false), 5000);
   };
 
-  const handlePrint = async (user) => {
-    const qrBase64 = await QRCode.toDataURL(user.qrCodeData);
-    const printHTML = `
-      <div class="print-container">
-        <div class="print-content">
-          <img src="${qrBase64}" class="qr-code" alt="QR Code"/>
-          <h2 class="user-name">${user.name}</h2>
-          <p class="user-org">${user.organization}</p>
-        </div>
-      </div>
-    `;
+const handlePrint = async (user) => {
+  const qrBase64 = await QRCode.toDataURL(user.qrCodeData);
+  const printWindow = window.open('', '_blank');
 
-    const printWindow = window.open('', '_blank');
-    printWindow.document.open();
-    printWindow.document.write(`
-      <html>
-      <head>
-        <title>Print User Details</title>
-        <style>
+  if (!printWindow) {
+    alert('Popup blocked — please allow popups for this site');
+    return;
+  }
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Print Badge</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body {
+          margin: 0;
+          padding: 0;
+          font-family: Arial, sans-serif;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          height: 100vh;
+          text-align: center;
+        }
+        img.qr {
+          width: 90px;
+          height: 90px;
+          margin-bottom: 10px;
+        }
+        .name {
+          font-size: 22px;
+          font-weight: bold;
+          margin-bottom: 4px;
+        }
+        .org {
+          font-size: 16px;
+        }
+        @media print {
           body {
-            margin: 0;
-            padding: 0;
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
-          .print-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            text-align: center;
+          @page {
+            size: auto;
+            margin: 5mm;
           }
-          .qr-code {
-            width: 120px;
-            height: 120px;
-            margin-bottom: 15px;
-          }
-          .user-name {
-            font-size: 24px;
-            margin-bottom: 5px;
-          }
-          .user-org {
-            font-size: 16px;
-            margin-top: 0;
-          }
-          @media print {
-            body {
-              -webkit-print-color-adjust: exact;
-            }
-          }
-        </style>
-      </head>
-      <body>
-        ${printHTML}
-        <script>
-          window.onload = () => {
+        }
+      </style>
+    </head>
+    <body>
+      <img class="qr" src="${qrBase64}" alt="QR Code" />
+      <div class="name">${user.name}</div>
+      <div class="org">${user.organization}</div>
+
+      <script>
+        // First approach: Print when window loads
+        window.onload = function() {
+          setTimeout(function() {
             window.print();
-            window.onafterprint = () => window.close();
+          }, 1000);
+        };
+
+        // Fallback approach: Add print button in case auto-print fails
+        document.addEventListener('DOMContentLoaded', function() {
+          const printBtn = document.createElement('button');
+          printBtn.textContent = 'Print Badge';
+          printBtn.style = 'position: fixed; top: 10px; left: 10px; z-index: 9999; padding: 10px;';
+          printBtn.onclick = function() {
+            window.print();
           };
-        </script>
-      </body>
-      </html>
-    `);
-    printWindow.document.close();
-  };
+          document.body.appendChild(printBtn);
+        });
+
+        // Handle after print to close window
+        window.onafterprint = function() {
+          setTimeout(function() {
+            window.close();
+          }, 500);
+        };
+      </script>
+    </body>
+    </html>
+  `;
+
+  printWindow.document.open();
+  printWindow.document.write(html);
+  printWindow.document.close();
+};
 
   const processQRCode = async (decodedText) => {
     try {
