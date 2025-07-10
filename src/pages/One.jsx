@@ -55,6 +55,7 @@ const handlePrint = async (user) => {
               align-items: center;
               justify-content: flex-start;
               padding-top: 6.5cm;
+              padding-left:-5px;
               box-sizing: border-box;
               text-align: center;
             }
@@ -69,7 +70,7 @@ const handlePrint = async (user) => {
               margin-bottom: 4px;
             }
             .org {
-              font-size: 14px;
+              font-size: 16px;
             }
             @media print {
               body {
