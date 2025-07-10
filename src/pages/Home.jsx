@@ -13,6 +13,8 @@ const Home = () => {
   const [showUserDetails, ] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [users, setUsers] = useState([]); 
+  const [day1Count, setDay1Count] = useState(0);
+const [day2Count, setDay2Count] = useState(0);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [page, setPage] = useState(1);
@@ -212,6 +214,28 @@ const handleResetUser = async (userId) => {
   }
 };
 
+const getUserCountDay1 = async () => {
+  try {
+    const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/count/day1`);
+    setDay1Count(res.data.day1Count || 0);
+  } catch (err) {
+    console.error('Failed to fetch Day 1 count:', err);
+  }
+};
+
+const getUserCountDay2 = async () => {
+  try {
+    const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/count/day2`);
+    setDay2Count(res.data.day2Count || 0);
+  } catch (err) {
+    console.error('Failed to fetch Day 2 count:', err);
+  }
+};
+useEffect(() => {
+  getUserCountDay1();
+  getUserCountDay2();
+}, []);
+
   return (
     <div className="home-container">
       {/* Side Navigation */}
@@ -257,6 +281,14 @@ const handleResetUser = async (userId) => {
 
            
           <div className="header-actions">
+            <button className="btn btn-export" onClick={getUserCountDay1}>
+            Day 1: {day1Count}
+          </button>
+
+          <button className="btn btn-export" onClick={getUserCountDay2}>
+            Day 2: {day2Count}
+          </button>
+
              <button className="btn btn-export" onClick={handleReset}>
               Reset All
             </button>
