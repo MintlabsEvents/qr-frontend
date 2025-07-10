@@ -30,64 +30,68 @@ const handlePrint = async (user) => {
   const qrBase64 = await QRCode.toDataURL(user.qrCodeData);
   const printWindow = window.open('', '_blank');
 
-  const html = `
-    <html>
-      <head>
-        <title>Print Badge</title>
-        <style>
-          body {
-            margin: 0;
-            padding: 0;
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            flex-direction: column;
-          }
-          .qr {
-            width: 100px;
-            height: 100px;
-            margin-bottom: 10px;
-          }
-          .name {
-            font-size: 22px;
-            font-weight: bold;
-            margin-bottom: 4px;
-            text-align: center;
-          }
-          .org {
-            font-size: 16px;
-            text-align: center;
-          }
-          @media print {
-            body {
-              -webkit-print-color-adjust: exact;
-            }
-          }
-        </style>
-      </head>
-      <body>
-        <img id="qr-img" class="qr" src="${qrBase64}" alt="QR" />
-        <div class="name">${user.name}</div>
-        <div class="org">${user.organization}</div>
+  if (!printWindow) {
+    alert('Popup blocked — please allow popups for this site');
+    return;
+  }
 
-        <script>
-          const img = document.getElementById('qr-img');
-          img.onload = () => {
-            setTimeout(() => {
-              window.print();
-            }, 300);
-          };
-          // Fallback in case onload doesn't fire (some Android browsers)
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Print Badge</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body {
+          margin: 0;
+          padding: 0;
+          font-family: Arial, sans-serif;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          height: 100vh;
+          text-align: center;
+        }
+        img.qr {
+          width: 90px;
+          height: 90px;
+          margin-bottom: 10px;
+        }
+        .name {
+          font-size: 22px;
+          font-weight: bold;
+          margin-bottom: 4px;
+        }
+        .org {
+          font-size: 16px;
+        }
+        @media print {
+          body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <img class="qr" src="${qrBase64}" alt="QR Code" />
+      <div class="name">${user.name}</div>
+      <div class="org">${user.organization}</div>
+
+      <script>
+        window.onload = () => {
+          // Give HP Smart time to hook the DOM
           setTimeout(() => {
-            if (document.readyState === 'complete') window.print();
+            window.print();
           }, 1000);
-          window.onafterprint = () => {
-            window.close();
-          };
-        </script>
-      </body>
+        };
+
+        window.onafterprint = () => {
+          setTimeout(() => window.close(), 500);
+        };
+      </script>
+    </body>
     </html>
   `;
 
@@ -95,6 +99,7 @@ const handlePrint = async (user) => {
   printWindow.document.write(html);
   printWindow.document.close();
 };
+
 
 
   const processQRCode = async (decodedText) => {
