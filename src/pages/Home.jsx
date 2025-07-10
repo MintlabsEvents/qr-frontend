@@ -190,6 +190,25 @@ const handleReset = async () => {
   }
 };
 
+const handleResetUser = async (userId) => {
+  if (!window.confirm('Are you sure you want to reset this user\'s attendance?')) return;
+
+  try {
+    const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/reset-user-attendance-Id`, {
+      userId
+    });
+
+    const updatedUser = response.data.user;
+    // Update local state if needed
+    setUsers((prev) => prev.map((u) => u._id === updatedUser._id ? updatedUser : u));
+    setFilteredUsers((prev) => prev.map((u) => u._id === updatedUser._id ? updatedUser : u));
+
+    alert('Attendance reset successfully');
+  } catch (err) {
+    console.error('Error resetting user:', err);
+    alert('Failed to reset user attendance');
+  }
+};
 
   return (
     <div className="home-container">
@@ -273,6 +292,7 @@ const handleReset = async () => {
     <th>Day 1</th>
     <th>Day 2</th>
     <th>Actions</th>
+    <th>Reset</th>
   </tr>
 </thead>
 
@@ -316,8 +336,12 @@ const handleReset = async () => {
        <button className="btn btn-view" onClick={() => downloadQRCode(user)}>
         <FaQrcode /> Download QR
       </button>
-
       </td>
+      <td>
+  <button className="btn btn-danger" onClick={() => handleResetUser(user._id)}>
+    Reset
+  </button>
+</td>
     </tr>
   ))}
 </tbody>

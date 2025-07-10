@@ -6,7 +6,7 @@ import './One.css';
 
 const One = () => {
   const [showScanner, setShowScanner] = useState(false);
-  const [alreadyAttended, setAlreadyAttended] = useState(false);
+  const [alreadyAttendedUser, setAlreadyAttendedUser] = useState(null);
   const printContainerRef = useRef(null);
   const html5QrCodeRef = useRef(null);
 
@@ -22,10 +22,10 @@ const One = () => {
     }
   };
 
-  const showAlreadyPopup = () => {
-    setAlreadyAttended(true);
-    setTimeout(() => setAlreadyAttended(false), 5000);
-  };
+  const showAlreadyPopup = (user) => {
+  setAlreadyAttendedUser(user);
+  setTimeout(() => setAlreadyAttendedUser(null), 5000);
+};
 
 const handlePrint = async (user) => {
   try {
@@ -126,7 +126,7 @@ const handlePrint = async (user) => {
       if (!user) return alert('User not found');
 
       if (user.day1Date || user.day1Time) {
-        showAlreadyPopup();
+        showAlreadyPopup(user);
         return;
       }
 
@@ -198,11 +198,12 @@ const handlePrint = async (user) => {
           <p className="scanner-status-text">Ready for barcode scan</p>
         )}
 
-        {alreadyAttended && (
-          <div className="popup-message">
-            <p>Already Attended</p>
-          </div>
-        )}
+        {alreadyAttendedUser && (
+        <div className="popup-message">
+          <p>Already Attended</p>
+          <button onClick={() => handlePrint(alreadyAttendedUser)}>Print Again</button>
+        </div>
+      )}
       </div>
 
       {/* Hidden div for future reference if needed */}
