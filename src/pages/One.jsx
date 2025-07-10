@@ -7,7 +7,6 @@ import './One.css';
 const One = () => {
   const [showScanner, setShowScanner] = useState(false);
   const [alreadyAttended, setAlreadyAttended] = useState(false);
-  const printContainerRef = useRef(null);
   const html5QrCodeRef = useRef(null);
 
   const stopCameraScanner = () => {
@@ -16,7 +15,7 @@ const One = () => {
         html5QrCodeRef.current.clear();
         html5QrCodeRef.current = null;
         setShowScanner(false);
-      }).catch(err => console.warn('Stop error:', err));
+      }).catch(console.warn);
     } else {
       setShowScanner(false);
     }
@@ -29,51 +28,38 @@ const One = () => {
 
   const handlePrint = async (user) => {
     const qrBase64 = await QRCode.toDataURL(user.qrCodeData);
-    const printHTML = `
-      <div class="print-container">
-        <div class="print-content">
-          <img src="${qrBase64}" class="qr-code" alt="QR Code"/>
-          <h2 class="user-name">${user.name}</h2>
-          <p class="user-org">${user.organization}</p>
-        </div>
-      </div>
-    `;
 
-    const printWindow = window.open('', '_blank');
-    printWindow.document.open();
-    printWindow.document.write(`
+    const printWindow = window.open('', '_blank', 'width=400,height=600');
+
+    const htmlContent = `
       <html>
       <head>
-        <title>Print User Details</title>
+        <title>Print User Badge</title>
         <style>
           body {
             margin: 0;
             padding: 0;
             font-family: Arial, sans-serif;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
+            justify-content: center;
             height: 100vh;
           }
-          .print-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            text-align: center;
-          }
-          .qr-code {
+          .qr {
             width: 120px;
             height: 120px;
             margin-bottom: 15px;
           }
-          .user-name {
-            font-size: 24px;
+          .name {
+            font-size: 22px;
+            font-weight: bold;
+            text-align: center;
             margin-bottom: 5px;
           }
-          .user-org {
+          .org {
             font-size: 16px;
-            margin-top: 0;
+            text-align: center;
           }
           @media print {
             body {
@@ -83,16 +69,24 @@ const One = () => {
         </style>
       </head>
       <body>
-        ${printHTML}
+        <img src="${qrBase64}" class="qr" alt="QR Code"/>
+        <div class="name">${user.name}</div>
+        <div class="org">${user.organization}</div>
+
         <script>
           window.onload = () => {
             window.print();
-            window.onafterprint = () => window.close();
+          };
+          window.onafterprint = () => {
+            window.close();
           };
         </script>
       </body>
       </html>
-    `);
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(htmlContent);
     printWindow.document.close();
   };
 
@@ -116,9 +110,9 @@ const One = () => {
 
       const updatedUser = markRes.data.user;
       if (updatedUser) handlePrint(updatedUser);
-      else alert('Attendance failed');
+      else alert('Attendance marking failed');
     } catch (err) {
-      console.error('Error:', err);
+      console.error(err);
       alert('Invalid QR Code');
     }
   };
@@ -143,8 +137,7 @@ const One = () => {
       html5QrCode.start(
         { facingMode: 'environment' },
         config,
-        handleScanFromCamera,
-        err => console.warn('QR scan error', err)
+        handleScanFromCamera
       ).catch(err => alert('Camera error: ' + err));
     }, 300);
   };
@@ -184,9 +177,6 @@ const One = () => {
           </div>
         )}
       </div>
-
-      {/* Hidden div for future reference if needed */}
-      <div ref={printContainerRef} style={{ display: 'none' }} />
     </div>
   );
 };
