@@ -47,6 +47,17 @@ const Registration = () => {
       alert('Registration failed');
     }
   };
+useEffect(() => {
+  // Prevent any body or html style interference
+  document.body.style.overflow = 'auto';
+  document.body.style.pointerEvents = 'auto';
+
+  return () => {
+    // Reset on unmount if needed
+    document.body.style.overflow = '';
+    document.body.style.pointerEvents = '';
+  };
+}, []);
 
   return (
     <div className="register-container">

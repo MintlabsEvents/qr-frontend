@@ -12,7 +12,7 @@ const Home = () => {
   const [showRegistrationForm, setShowRegistrationForm] = useState(false);
   const [showUserDetails, ] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState([]); 
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [page, setPage] = useState(1);
@@ -69,15 +69,17 @@ const handleSearch = (e) => {
   const term = e.target.value.toLowerCase();
   setSearchTerm(term);
 
-  const filtered = users.filter(user => 
-    (user.name?.toLowerCase().includes(term)) || 
-    (user.email?.toLowerCase().includes(term)) ||
-    (user.mobile?.toString().includes(term))
+  const filtered = users.filter((user) =>
+    (user.name && user.name.toLowerCase().includes(term)) ||
+    (user.email && user.email.toLowerCase().includes(term)) ||
+    (user.mobile && user.mobile.toString().includes(term))
   );
 
   setFilteredUsers(filtered);
-  setPage(1); // reset pagination
+  setPage(1);
 };
+
+
 
 
 const downloadQRCode = async (user) => {
@@ -241,14 +243,17 @@ const handleResetUser = async (userId) => {
           
 
           <div className="search-bar">
-            <FaSearch className="search-icon" />
-            <input
-              type="text"
-              placeholder="Search by name, mobile or email..."
-              value={searchTerm}
-              onChange={handleSearch}
-            />
-          </div>
+  <span className="search-icon">
+    <FaSearch />
+  </span>
+  <input
+    type="text"
+    placeholder="Search by name, mobile or email..."
+    value={searchTerm}
+    onChange={handleSearch}
+  />
+</div>
+
 
            
           <div className="header-actions">

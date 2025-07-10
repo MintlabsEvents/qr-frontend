@@ -1,31 +1,31 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Html5Qrcode } from 'html5-qrcode';
 import QRCode from 'qrcode';
 import './One.css';
 
 const One = () => {
-  const [showScanner, setShowScanner] = useState(false);
   const [alreadyAttendedUser, setAlreadyAttendedUser] = useState(null);
   const printContainerRef = useRef(null);
-  const html5QrCodeRef = useRef(null);
 
-  const stopCameraScanner = () => {
-    if (html5QrCodeRef.current) {
-      html5QrCodeRef.current.stop().then(() => {
-        html5QrCodeRef.current.clear();
-        html5QrCodeRef.current = null;
-        setShowScanner(false);
-      }).catch(err => console.warn('Stop error:', err));
-    } else {
-      setShowScanner(false);
-    }
-  };
+  // Listen for barcode scanner input
+  useEffect(() => {
+    let buffer = '';
+    const onKey = (e) => {
+      if (e.key === 'Enter') {
+        processQRCode(buffer.trim());
+        buffer = '';
+      } else if (e.key.length === 1) {
+        buffer += e.key;
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
 
   const showAlreadyPopup = (user) => {
-  setAlreadyAttendedUser(user);
-  setTimeout(() => setAlreadyAttendedUser(null), 5000);
-};
+    setAlreadyAttendedUser(user);
+    setTimeout(() => setAlreadyAttendedUser(null), 5000);
+  };
 
 const handlePrint = async (user) => {
   try {
@@ -43,19 +43,19 @@ const handlePrint = async (user) => {
             html, body {
               margin: 0;
               padding: 0;
-              height: 100%;
-              width: 100%;
+              height: 13.7cm;
+              width: 9.5cm;
               font-family: Arial, sans-serif;
+              overflow: hidden;
             }
             .print-page {
-              width: 9.5cm;
-              height: 13.7cm;
+              height: 100%;
+              width: 100%;
               display: flex;
               flex-direction: column;
               align-items: center;
               justify-content: flex-start;
-              padding-top: 7cm;
-              padding-left:-5px;
+              padding-top: 6.5cm;
               box-sizing: border-box;
               text-align: center;
             }
@@ -65,12 +65,16 @@ const handlePrint = async (user) => {
               margin-bottom: 10px;
             }
             .name {
-              font-size: 20px;
+              font-size: 18px;
               font-weight: bold;
               margin-bottom: 4px;
             }
             .org {
-              font-size: 16px;
+              font-size: 14px;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              max-width: 90%;
             }
             @media print {
               body {
@@ -114,8 +118,6 @@ const handlePrint = async (user) => {
 };
 
 
-
-
   const processQRCode = async (decodedText) => {
     try {
       const checkRes = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/check-attendance`, {
@@ -143,70 +145,19 @@ const handlePrint = async (user) => {
     }
   };
 
-  const handleScanFromCamera = (decodedText) => {
-    stopCameraScanner();
-    processQRCode(decodedText);
-  };
-
-  const startCameraScanner = () => {
-    stopCameraScanner();
-    setShowScanner(true);
-
-    setTimeout(() => {
-      const scannerElement = document.getElementById('scanner');
-      if (!scannerElement) return alert('Scanner element missing');
-
-      const config = { fps: 10, qrbox: { width: 300, height: 300 } };
-      const html5QrCode = new Html5Qrcode('scanner');
-      html5QrCodeRef.current = html5QrCode;
-
-      html5QrCode.start(
-        { facingMode: 'environment' },
-        config,
-        handleScanFromCamera,
-        err => console.warn('QR scan error', err)
-      ).catch(err => alert('Camera error: ' + err));
-    }, 300);
-  };
-
-  const handleBarcodeGun = () => {
-    stopCameraScanner();
-    let buffer = '';
-    const onKey = (e) => {
-      if (e.key === 'Enter') {
-        document.removeEventListener('keydown', onKey);
-        processQRCode(buffer.trim());
-        buffer = '';
-      } else if (e.key.length === 1) {
-        buffer += e.key;
-      }
-    };
-    document.addEventListener('keydown', onKey);
-  };
-
   return (
     <div className="one-container">
       <div className="one-main">
-        <div className="scanner-options">
-          <button onClick={handleBarcodeGun}>Scan Using Barcode Scanner</button>
-          <button onClick={startCameraScanner}>Scan Using Camera</button>
-        </div>
-
-        {showScanner ? (
-          <div id="scanner" className="camera-box"></div>
-        ) : (
-          <p className="scanner-status-text">Ready for barcode scan</p>
-        )}
+        <p className="scanner-status-text">Waiting for barcode scan...</p>
 
         {alreadyAttendedUser && (
-        <div className="popup-message">
-          <p>Already Attended</p>
-          <button onClick={() => handlePrint(alreadyAttendedUser)}>Print Again</button>
-        </div>
-      )}
+          <div className="popup-message">
+            <p>Already Attended</p>
+            <button onClick={() => handlePrint(alreadyAttendedUser)}>Print Again</button>
+          </div>
+        )}
       </div>
 
-      {/* Hidden div for future reference if needed */}
       <div ref={printContainerRef} style={{ display: 'none' }} />
     </div>
   );

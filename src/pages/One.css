@@ -74,7 +74,7 @@
   100% { opacity: 0; }
 }
 
-/* Hide all form inputs so barcode doesn't type anywhere */
-input, textarea, select {
-  display: none !important;
+.register-container {
+  position: relative;
+  z-index: 1; /* Make sure it's above any fixed nav */
 }

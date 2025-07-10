@@ -75,22 +75,29 @@
 .search-bar {
   display: flex;
   align-items: center;
-  background-color: white;
   border-radius: 20px;
   padding: 5px 15px;
   width: 40%;
-}
-
-.search-bar input {
-  border: none;
-  outline: none;
-  padding: 8px;
-  width: 100%;
+  border: 1px solid #ced4da;
+  background-color: white;
 }
 
 .search-icon {
   margin-right: 10px;
   color: #6c757d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-bar input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background-color: transparent;
+  padding: 8px 0;
+  color: #000000;
+  font-size: 14px;
 }
 
 .header-actions {
