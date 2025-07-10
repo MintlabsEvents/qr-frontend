@@ -7,16 +7,17 @@ import './One.css';
 const One = () => {
   const [showScanner, setShowScanner] = useState(false);
   const [alreadyAttended, setAlreadyAttended] = useState(false);
-  const printContainerRef = useRef(null);
   const html5QrCodeRef = useRef(null);
 
   const stopCameraScanner = () => {
     if (html5QrCodeRef.current) {
-      html5QrCodeRef.current.stop().then(() => {
-        html5QrCodeRef.current.clear();
-        html5QrCodeRef.current = null;
-        setShowScanner(false);
-      }).catch(err => console.warn('Stop error:', err));
+      html5QrCodeRef.current.stop()
+        .then(() => {
+          html5QrCodeRef.current.clear();
+          html5QrCodeRef.current = null;
+          setShowScanner(false);
+        })
+        .catch(err => console.warn('Stop error:', err));
     } else {
       setShowScanner(false);
     }
@@ -29,70 +30,66 @@ const One = () => {
 
   const handlePrint = async (user) => {
     const qrBase64 = await QRCode.toDataURL(user.qrCodeData);
-    const printHTML = `
-      <div class="print-container">
-        <div class="print-content">
-          <img src="${qrBase64}" class="qr-code" alt="QR Code"/>
-          <h2 class="user-name">${user.name}</h2>
-          <p class="user-org">${user.organization}</p>
-        </div>
-      </div>
-    `;
 
-    const printWindow = window.open('', '_blank');
-    printWindow.document.open();
+    const printWindow = window.open('', '_self');
+    if (!printWindow) {
+      alert('Popup blocked.');
+      return;
+    }
+
     printWindow.document.write(`
       <html>
-      <head>
-        <title>Print User Details</title>
-        <style>
-          body {
-            margin: 0;
-            padding: 0;
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-          }
-          .print-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            text-align: center;
-          }
-          .qr-code {
-            width: 120px;
-            height: 120px;
-            margin-bottom: 15px;
-          }
-          .user-name {
-            font-size: 24px;
-            margin-bottom: 5px;
-          }
-          .user-org {
-            font-size: 16px;
-            margin-top: 0;
-          }
-          @media print {
+        <head>
+          <title>Print</title>
+          <style>
             body {
-              -webkit-print-color-adjust: exact;
+              margin: 0;
+              padding: 0;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              height: 100vh;
+              font-family: Arial, sans-serif;
             }
-          }
-        </style>
-      </head>
-      <body>
-        ${printHTML}
-        <script>
-          window.onload = () => {
-            window.print();
-            window.onafterprint = () => window.close();
-          };
-        </script>
-      </body>
+            .badge {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+            }
+            .qr img {
+              width: 90px;
+              height: 90px;
+              margin-bottom: 10px;
+            }
+            .name {
+              font-size: 24px;
+              font-weight: bold;
+              text-align: center;
+            }
+            .org {
+              font-size: 14px;
+              text-align: center;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="badge">
+            <div class="qr"><img src="${qrBase64}" /></div>
+            <div class="name">${user.name}</div>
+            <div class="org">${user.organization}</div>
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(() => {
+                window.print();
+                window.location.reload(); // Reset back to scanner after print
+              }, 300);
+            }
+          </script>
+        </body>
       </html>
     `);
+
     printWindow.document.close();
   };
 
@@ -184,9 +181,6 @@ const One = () => {
           </div>
         )}
       </div>
-
-      {/* Hidden div for future reference if needed */}
-      <div ref={printContainerRef} style={{ display: 'none' }} />
     </div>
   );
 };
