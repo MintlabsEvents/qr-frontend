@@ -65,12 +65,12 @@ const handlePrint = async (user) => {
               margin-bottom: 10px;
             }
             .name {
-              font-size: 24px;
+              font-size: 26px;
               font-weight: bold;
               margin-bottom: 4px;
             }
             .org {
-              font-size: 20px;
+              font-size: 24px;
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
