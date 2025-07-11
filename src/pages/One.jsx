@@ -60,17 +60,17 @@ const handlePrint = async (user) => {
               text-align: center;
             }
             .qr {
-              width: 100px;
-              height: 100px;
+              width: 105px;
+              height: 105px;
               margin-bottom: 10px;
             }
             .name {
-              font-size: 20px;
+              font-size: 24px;
               font-weight: bold;
               margin-bottom: 4px;
             }
             .org {
-              font-size: 16px;
+              font-size: 20px;
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
