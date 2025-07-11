@@ -77,22 +77,24 @@ const Registration = () => {
                 text-align: center;
               }
               .qr {
-                width: 90px;
-                height: 90px;
-                margin-bottom: 10px;
-              }
-              .name {
-                font-size: 18px;
-                font-weight: bold;
-                margin-bottom: 4px;
-              }
-              .org {
-                font-size: 14px;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                max-width: 90%;
-              }
+              width: 105px;
+              height: 105px;
+              margin-bottom: 10px;
+            }
+            .name {
+              font-size: 23px;
+              font-weight: bold;
+              margin-bottom: 4px;
+              text-transform: uppercase;
+            }
+            .org {
+              font-size: 19px;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              max-width: 90%;
+              text-transform: uppercase;
+            }
               @media print {
                 body {
                   -webkit-print-color-adjust: exact;
