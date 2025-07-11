@@ -155,7 +155,7 @@ const handleSubmit = async (e) => {
     alert('User registered successfully');
 
     // ✅ Mark Day 1 Attendance and set onSiteDay1 true
-    await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/attendance/day1`, {
+    await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/attendance/day2`, {
       qrCodeData: user.qrCodeData,
       onSiteDay1: true  // Send this from frontend only
     });

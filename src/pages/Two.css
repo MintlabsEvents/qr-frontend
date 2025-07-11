@@ -65,3 +65,35 @@ h2 {
   font-size: 16px;
   color: #555;
 }
+
+
+.popup.centered {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  border: 2px solid #007bff;
+  padding: 30px 20px;
+  z-index: 9999;
+  text-align: center;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+  border-radius: 10px;
+}
+
+.popup-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.popup-buttons button {
+  padding: 8px 14px;
+  font-size: 15px;
+  cursor: pointer;
+  border: none;
+  border-radius: 6px;
+  background-color: #007bff;
+  color: white;
+}
