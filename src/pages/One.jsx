@@ -68,6 +68,7 @@ const handlePrint = async (user) => {
               font-size: 26px;
               font-weight: bold;
               margin-bottom: 4px;
+              text-transform: uppercase;
             }
             .org {
               font-size: 24px;
@@ -75,6 +76,7 @@ const handlePrint = async (user) => {
               overflow: hidden;
               text-overflow: ellipsis;
               max-width: 90%;
+              text-transform: uppercase;
             }
             @media print {
               body {
