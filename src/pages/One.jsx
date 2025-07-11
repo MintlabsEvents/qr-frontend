@@ -71,7 +71,7 @@ const handlePrint = async (user) => {
               text-transform: uppercase;
             }
             .org {
-              font-size: 21px;
+              font-size: 19px;
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
