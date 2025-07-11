@@ -55,22 +55,22 @@ const handlePrint = async (user) => {
               flex-direction: column;
               align-items: center;
               justify-content: flex-start;
-              padding-top: 6.5cm;
+              padding-top: 7.5cm;
               box-sizing: border-box;
               text-align: center;
             }
             .qr {
-              width: 90px;
-              height: 90px;
+              width: 100px;
+              height: 100px;
               margin-bottom: 10px;
             }
             .name {
-              font-size: 18px;
+              font-size: 20px;
               font-weight: bold;
               margin-bottom: 4px;
             }
             .org {
-              font-size: 14px;
+              font-size: 16px;
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
