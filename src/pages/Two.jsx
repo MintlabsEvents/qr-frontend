@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import QRCode from 'qrcode';
 import './Two.css';
@@ -7,13 +7,24 @@ const Two = () => {
   const [popup, setPopup] = useState(null);
   const [statusText, setStatusText] = useState('Waiting for barcode scanner input...');
   const [scannedUser, setScannedUser] = useState(null);
+  const isProcessingRef = useRef(false); // 👈 lock for debounce
 
   useEffect(() => {
     let buffer = '';
     const onKey = (e) => {
       if (e.key === 'Enter') {
-        processQRCode(buffer.trim());
+        if (isProcessingRef.current) return; // 👈 prevent re-entry
+        isProcessingRef.current = true;
+
+        const qr = buffer.trim();
         buffer = '';
+
+        processQRCode(qr).finally(() => {
+          // release the lock after delay
+          setTimeout(() => {
+            isProcessingRef.current = false;
+          }, 1000);
+        });
       } else if (e.key.length === 1) {
         buffer += e.key;
       }
@@ -28,30 +39,30 @@ const Two = () => {
   const processQRCode = async (qrCodeData) => {
     setStatusText('Processing...');
     try {
-      const checkRes = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/check-attendance`, { qrCodeData });
+      const checkRes = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/check-attendance`, {
+        qrCodeData
+      });
+
       const user = checkRes.data.user;
       if (!user) {
         setPopup('error');
         return;
       }
 
+      setScannedUser(user);
+
       if (user.day2Date || user.day2Time) {
-        setScannedUser(user);
         setPopup('already');
-        return;
-      }
-
-      const markRes = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/attendance/day2`, { qrCodeData });
-      const updatedUser = markRes.data.user;
-
-      if (updatedUser) {
+      } else {
+        const markRes = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/attendance/day2`, {
+          qrCodeData
+        });
+        const updatedUser = markRes.data.user;
         setScannedUser(updatedUser);
         setPopup('success');
-      } else {
-        setPopup('error');
       }
     } catch (err) {
-      console.error('QR Error:', err);
+      console.error(err);
       setPopup('error');
     } finally {
       setStatusText('Waiting for barcode scanner input...');
@@ -60,6 +71,7 @@ const Two = () => {
 
   const handlePrint = async () => {
     if (!scannedUser) return;
+
     try {
       const qrBase64 = await QRCode.toDataURL(scannedUser.qrCodeData);
       const printHTML = `
@@ -123,11 +135,7 @@ const Two = () => {
       `;
 
       const printWindow = window.open('', '_blank');
-      if (!printWindow) {
-        alert('Popup blocked. Please allow popups for this site.');
-        return;
-      }
-
+      if (!printWindow) return alert('Popup blocked. Please allow popups for this site.');
       printWindow.document.open();
       printWindow.document.write(printHTML);
       printWindow.document.close();
@@ -152,9 +160,7 @@ const Two = () => {
       return (
         <div className="popup centered">
           <p>⚠️ Already Attended</p>
-          <div className="popup-buttons">
-            <button onClick={handlePrint}>Print Again</button>
-          </div>
+          <button onClick={handlePrint}>Print Again</button>
         </div>
       );
     } else if (popup === 'error') {
