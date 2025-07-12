@@ -22,11 +22,10 @@ const Two = () => {
         setTimeout(() => {
           debounceRef.current = false;
         }, 1000);
-
-        if (scanned && scanned !== lastScannedRef.current) {
-          processQRCode(scanned);
-          lastScannedRef.current = scanned;
-        } else if (scanned === lastScannedRef.current) {
+if (scanned && scanned !== lastScannedRef.current) {
+  lastScannedRef.current = scanned;
+  processQRCode(scanned);
+}else if (scanned === lastScannedRef.current) {
           // Repeated scan of same QR code
           processQRCode(scanned);
         }
