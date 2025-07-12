@@ -8,6 +8,7 @@ const Two = () => {
   const [scannedUser, setScannedUser] = useState(null);
   const lastScannedRef = useRef('');
   const debounceRef = useRef(false);
+  const abortControllerRef = useRef(null);
 
   useEffect(() => {
     let buffer = '';
@@ -22,11 +23,11 @@ const Two = () => {
         setTimeout(() => {
           debounceRef.current = false;
         }, 1000);
-if (scanned && scanned !== lastScannedRef.current) {
-  lastScannedRef.current = scanned;
-  processQRCode(scanned);
-}else if (scanned === lastScannedRef.current) {
-          // Repeated scan of same QR code
+
+        if (scanned && scanned !== lastScannedRef.current) {
+          lastScannedRef.current = scanned;
+          processQRCode(scanned);
+        } else if (scanned === lastScannedRef.current) {
           processQRCode(scanned);
         }
       } else if (e.key.length === 1) {
@@ -39,10 +40,18 @@ if (scanned && scanned !== lastScannedRef.current) {
   }, []);
 
   const processQRCode = async (decodedText) => {
+    // Cancel any previous pending requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
     try {
-      const checkRes = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/check-attendance`, {
-        qrCodeData: decodedText
-      });
+      const checkRes = await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/api/check-attendance`,
+        { qrCodeData: decodedText },
+        { signal: abortControllerRef.current.signal }
+      );
 
       const user = checkRes.data.user;
       if (!user) {
@@ -57,17 +66,23 @@ if (scanned && scanned !== lastScannedRef.current) {
         return;
       }
 
-      const markRes = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/attendance/day2`, {
-        qrCodeData: decodedText
-      });
+      const markRes = await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/api/attendance/day2`,
+        { qrCodeData: decodedText },
+        { signal: abortControllerRef.current.signal }
+      );
 
       const updatedUser = markRes.data.user;
       setScannedUser(updatedUser);
       setPopup('success');
 
     } catch (err) {
-      console.error('Error:', err);
-      setPopup('error');
+      if (axios.isCancel(err)) {
+        console.warn('Request cancelled');
+      } else {
+        console.error('Error:', err);
+        setPopup('error');
+      }
     }
   };
 
@@ -136,6 +151,15 @@ if (scanned && scanned !== lastScannedRef.current) {
     }
   };
 
+  const closePopup = () => {
+    setPopup('');
+    setScannedUser(null);
+    lastScannedRef.current = '';
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort(); // cancel any pending request
+    }
+  };
+
   const renderPopup = () => {
     if (popup === 'success') {
       return (
@@ -143,7 +167,7 @@ if (scanned && scanned !== lastScannedRef.current) {
           <p>✅ Attended Successfully</p>
           <div className="popup-buttons">
             <button onClick={handlePrint}>Print</button>
-            <button onClick={() => setPopup('')}>Cancel</button>
+            <button onClick={closePopup}>Cancel</button>
           </div>
         </div>
       );
