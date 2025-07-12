@@ -1,30 +1,35 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import QRCode from 'qrcode';
 import './Two.css';
 
 const Two = () => {
-  const [popup, setPopup] = useState(null);
-  const [statusText, setStatusText] = useState('Waiting for barcode scanner input...');
+  const [popup, setPopup] = useState('');
   const [scannedUser, setScannedUser] = useState(null);
-  const debounceRef = useRef(false); // ✅ To prevent rapid scans
+  const lastScannedRef = useRef('');
+  const debounceRef = useRef(false);
 
   useEffect(() => {
     let buffer = '';
-    const onKey = async (e) => {
-      if (e.key === 'Enter' && buffer.trim()) {
-        const code = buffer.trim();
+    const onKey = (e) => {
+      if (e.key === 'Enter') {
+        const scanned = buffer.trim();
         buffer = '';
 
         if (debounceRef.current) return;
         debounceRef.current = true;
 
-        await processQRCode(code);
-
-        // Reset debounce after 1 second
         setTimeout(() => {
           debounceRef.current = false;
         }, 1000);
+
+        if (scanned && scanned !== lastScannedRef.current) {
+          processQRCode(scanned);
+          lastScannedRef.current = scanned;
+        } else if (scanned === lastScannedRef.current) {
+          // Repeated scan of same QR code
+          processQRCode(scanned);
+        }
       } else if (e.key.length === 1) {
         buffer += e.key;
       }
@@ -34,32 +39,36 @@ const Two = () => {
     return () => document.removeEventListener('keydown', onKey);
   }, []);
 
-  const processQRCode = async (qrCodeData) => {
-    setStatusText('Processing...');
-
+  const processQRCode = async (decodedText) => {
     try {
-      // Check attendance
-      const checkRes = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/check-attendance`, { qrCodeData });
+      const checkRes = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/check-attendance`, {
+        qrCodeData: decodedText
+      });
+
       const user = checkRes.data.user;
-      if (!user) throw new Error('User not found');
+      if (!user) {
+        setPopup('error');
+        return;
+      }
 
       setScannedUser(user);
 
-      // If already attended Day 2
       if (user.day2Date || user.day2Time) {
         setPopup('already');
         return;
       }
 
-      // Mark Day 2 attendance
-      const markRes = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/attendance/day2`, { qrCodeData });
-      setScannedUser(markRes.data.user);
+      const markRes = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/attendance/day2`, {
+        qrCodeData: decodedText
+      });
+
+      const updatedUser = markRes.data.user;
+      setScannedUser(updatedUser);
       setPopup('success');
+
     } catch (err) {
-      console.error(err);
+      console.error('Error:', err);
       setPopup('error');
-    } finally {
-      setStatusText('Waiting for barcode scanner input...');
     }
   };
 
@@ -68,6 +77,7 @@ const Two = () => {
 
     try {
       const qrBase64 = await QRCode.toDataURL(scannedUser.qrCodeData);
+
       const printHTML = `
         <html>
           <head>
@@ -75,42 +85,24 @@ const Two = () => {
             <style>
               @page { size: 9.5cm 13.7cm; margin: 0; }
               html, body {
-                margin: 0;
-                padding: 0;
-                height: 13.7cm;
-                width: 9.5cm;
-                font-family: Arial, sans-serif;
-                overflow: hidden;
+                margin: 0; padding: 0; height: 13.7cm; width: 9.5cm;
+                font-family: Arial, sans-serif; overflow: hidden;
               }
               .print-page {
-                height: 100%;
-                width: 100%;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: flex-start;
-                padding-top: 7.5cm;
-                box-sizing: border-box;
-                text-align: center;
+                height: 100%; width: 100%;
+                display: flex; flex-direction: column;
+                align-items: center; justify-content: flex-start;
+                padding-top: 7.5cm; box-sizing: border-box; text-align: center;
               }
               .qr {
-                width: 105px;
-                height: 105px;
-                margin-bottom: 10px;
+                width: 105px; height: 105px; margin-bottom: 10px;
               }
               .name {
-                font-size: 23px;
-                font-weight: bold;
-                margin-bottom: 4px;
-                text-transform: uppercase;
+                font-size: 23px; font-weight: bold; margin-bottom: 4px; text-transform: uppercase;
               }
               .org {
-                font-size: 19px;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                max-width: 90%;
-                text-transform: uppercase;
+                font-size: 19px; white-space: nowrap; overflow: hidden;
+                text-overflow: ellipsis; max-width: 90%; text-transform: uppercase;
               }
             </style>
           </head>
@@ -123,21 +115,25 @@ const Two = () => {
             <script>
               const img = document.getElementById('qrImage');
               img.onload = function () { window.print(); };
-              window.onafterprint = () => window.close();
+              window.onafterprint = () => { window.close(); };
             </script>
           </body>
         </html>
       `;
 
       const printWindow = window.open('', '_blank');
-      if (!printWindow) return alert('Popup blocked. Please allow popups for this site.');
+      if (!printWindow) {
+        alert('Popup blocked. Please allow popups for this site.');
+        return;
+      }
 
       printWindow.document.open();
       printWindow.document.write(printHTML);
       printWindow.document.close();
+
     } catch (err) {
       console.error('Print error:', err);
-      alert('Failed to print badge');
+      alert('Failed to generate badge');
     }
   };
 
@@ -148,7 +144,7 @@ const Two = () => {
           <p>✅ Attended Successfully</p>
           <div className="popup-buttons">
             <button onClick={handlePrint}>Print</button>
-            <button onClick={() => setPopup(null)}>Cancel</button>
+            <button onClick={() => setPopup('')}>Cancel</button>
           </div>
         </div>
       );
@@ -172,7 +168,7 @@ const Two = () => {
   return (
     <div className="container">
       <h2>Day 2 Check-In</h2>
-      <p className="scanner-status">{statusText}</p>
+      <p className="scanner-status">Waiting for barcode scanner input...</p>
       {renderPopup()}
     </div>
   );
