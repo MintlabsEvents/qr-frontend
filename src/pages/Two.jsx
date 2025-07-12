@@ -12,7 +12,7 @@ const Two = () => {
     let buffer = '';
     const onKey = (e) => {
       if (e.key === 'Enter') {
-        markAttendance(buffer.trim());
+        processQRCode(buffer.trim());
         buffer = '';
       } else if (e.key.length === 1) {
         buffer += e.key;
@@ -25,20 +25,33 @@ const Two = () => {
     };
   }, []);
 
-  const markAttendance = async (qrCodeData) => {
+  const processQRCode = async (qrCodeData) => {
     setStatusText('Processing...');
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/attendance/day2`, { qrCodeData });
-      const user = res.data.user;
-      setScannedUser(user);
+      const checkRes = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/check-attendance`, { qrCodeData });
+      const user = checkRes.data.user;
+      if (!user) {
+        setPopup('error');
+        return;
+      }
 
-      if (user?.day2Date && user?.day2Time) {
+      if (user.day2Date || user.day2Time) {
+        setScannedUser(user);
+        setPopup('already');
+        return;
+      }
+
+      const markRes = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/attendance/day2`, { qrCodeData });
+      const updatedUser = markRes.data.user;
+
+      if (updatedUser) {
+        setScannedUser(updatedUser);
         setPopup('success');
       } else {
-        setPopup('already');
+        setPopup('error');
       }
     } catch (err) {
-      console.error(err);
+      console.error('QR Error:', err);
       setPopup('error');
     } finally {
       setStatusText('Waiting for barcode scanner input...');
@@ -47,7 +60,6 @@ const Two = () => {
 
   const handlePrint = async () => {
     if (!scannedUser) return;
-
     try {
       const qrBase64 = await QRCode.toDataURL(scannedUser.qrCodeData);
       const printHTML = `
@@ -55,10 +67,7 @@ const Two = () => {
           <head>
             <title></title>
             <style>
-              @page {
-                size: 9.5cm 13.7cm;
-                margin: 0;
-              }
+              @page { size: 9.5cm 13.7cm; margin: 0; }
               html, body {
                 margin: 0;
                 padding: 0;
@@ -78,11 +87,7 @@ const Two = () => {
                 box-sizing: border-box;
                 text-align: center;
               }
-              .qr {
-                width: 105px;
-                height: 105px;
-                margin-bottom: 10px;
-              }
+              .qr { width: 105px; height: 105px; margin-bottom: 10px; }
               .name {
                 font-size: 23px;
                 font-weight: bold;
@@ -97,6 +102,9 @@ const Two = () => {
                 max-width: 90%;
                 text-transform: uppercase;
               }
+              @media print {
+                body { -webkit-print-color-adjust: exact; }
+              }
             </style>
           </head>
           <body>
@@ -107,12 +115,8 @@ const Two = () => {
             </div>
             <script>
               const img = document.getElementById('qrImage');
-              img.onload = function () {
-                window.print();
-              };
-              window.onafterprint = () => {
-                window.close();
-              };
+              img.onload = function () { window.print(); };
+              window.onafterprint = () => { window.close(); };
             </script>
           </body>
         </html>
@@ -148,7 +152,9 @@ const Two = () => {
       return (
         <div className="popup centered">
           <p>⚠️ Already Attended</p>
-          <button onClick={handlePrint}>Print Again</button>
+          <div className="popup-buttons">
+            <button onClick={handlePrint}>Print Again</button>
+          </div>
         </div>
       );
     } else if (popup === 'error') {
