@@ -361,29 +361,77 @@ const markAttendance = async () => {
     resetToMainPage();
   };
 
+
+   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Enter fullscreen function
+  const enterFullscreen = () => {
+    const element = document.documentElement;
+    
+    if (element.requestFullscreen) {
+      element.requestFullscreen();
+    } else if (element.webkitRequestFullscreen) {
+      element.webkitRequestFullscreen(); // Safari
+    } else if (element.msRequestFullscreen) {
+      element.msRequestFullscreen(); // IE/Edge
+    }
+  };
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('msfullscreenchange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('msfullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  
   return (
-    <div className="one-container">
-      {/* Side Navigation */}
-      <nav id="sidenav-1" className={`sidenav ${isSideNavOpen ? 'open' : ''}`}>
-        <div className="sidenav-header">
-          <button className="close-sidenav" onClick={toggleSideNav}>
-            <FaTimes />
-          </button>
-        </div>
-        <ul className="sidenav-menu">
-          <li className="sidenav-item">
-            <a className="sidenav-link" onClick={() => navigate('/')}>
-              <i className="fas fa-home fa-fw me-3"></i><span>Home</span>
-            </a>
-          </li>
-        </ul>
-      </nav>
-
-      {/* Header Button */}
-      <button className="btn btn-primary menu-toggle" onClick={toggleSideNav}>
-        <FaBars />
+<div className="one-container">
+  {/* Side Navigation */}
+  <nav id="sidenav-1" className={`sidenav ${isSideNavOpen ? 'open' : ''}`}>
+    <div className="sidenav-header">
+      <button className="close-sidenav" onClick={toggleSideNav}>
+        <FaTimes />
       </button>
+    </div>
+    <ul className="sidenav-menu">
+      <li className="sidenav-item">
+        <a className="sidenav-link" onClick={() => navigate('/')}>
+          <i className="fas fa-home fa-fw me-3"></i><span>Home</span>
+        </a>
+      </li>
+    </ul>
+  </nav>
 
+  {/* Header Buttons */}
+  <div className="header-buttons">
+    <button className="btn btn-primary menu-toggle" onClick={toggleSideNav}>
+      <FaBars />
+    </button>
+    
+    {/* Fullscreen Button - Only show when not in fullscreen */}
+    {!document.fullscreenElement && (
+      <button 
+        className="fullscreen-btn"
+        onClick={enterFullscreen}
+        title="Enter Fullscreen"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+        </svg>
+      </button>
+    )}
+  </div>
 
 
       <div className="one-main">
