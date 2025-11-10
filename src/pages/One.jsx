@@ -387,7 +387,7 @@ const markAttendance = async () => {
 
 
       <div className="one-main">
-          <img src={Logo} alt="Logo" className="header-logo" />
+          <img src={Logo} alt="Logo" className="headers-logo" />
         <h1 className="page-title">Mark Attendance</h1>
         
         {/* Scan Method Selection - MAIN PAGE */}

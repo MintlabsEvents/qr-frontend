@@ -744,7 +744,7 @@ button:focus, input:focus, a:focus { outline: 3px solid rgba(102,126,234,0.18); 
 
 /* End of One.css */
 
-.header-logo {
+.headers-logo {
   max-width: 200px;    /* Maximum width as per your JSX */
   width: 100%;         /* Responsive width */
   height: auto;        /* Maintain aspect ratio */
@@ -756,13 +756,13 @@ button:focus, input:focus, a:focus { outline: 3px solid rgba(102,126,234,0.18); 
 }
 
 @media (max-width: 768px) {
-  .header-logo {
+  .headers-logo {
     max-width: 150px;  /* Smaller max width on tablets */
   }
 }
 
 @media (max-width: 480px) {
-  .header-logo {
+  .headers-logo {
     max-width: 120px;  /* Smaller max width on small phones */
     margin-right: 4%;  /* Slightly more separation at small size */
   }
