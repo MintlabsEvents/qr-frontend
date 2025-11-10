@@ -1,0 +1,12 @@
+{
+  "routes": [
+    {
+      "src": "/attendance",
+      "dest": "/index.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
+}

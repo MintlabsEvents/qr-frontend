@@ -7,6 +7,7 @@ import { PaginationControl } from 'react-bootstrap-pagination-control';
 import QRCode from 'qrcode';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
+import Logo from '../assets/black.png'
 
 const Home = () => {
   const [isSideNavOpen, setIsSideNavOpen] = useState(false);
@@ -342,6 +343,9 @@ const Home = () => {
           <button className="btn btn-primary" onClick={toggleSideNav} aria-controls="#sidenav-1" aria-haspopup="true">
             <FaBars />
           </button>
+
+        <img src={Logo} alt="Logo" className="header-logo" />
+
 
           <div className="search-bar">
             <span className="search-icon">

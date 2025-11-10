@@ -4,6 +4,7 @@ import { FaCamera, FaBarcode, FaQrcode, FaBars, FaTimes } from 'react-icons/fa';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import './One.css';
 import { useNavigate } from 'react-router-dom';
+import Logo from '../assets/black.png'
 
 const One = () => {
   const [message, setMessage] = useState('Select scan method to start...');
@@ -383,7 +384,10 @@ const markAttendance = async () => {
         <FaBars />
       </button>
 
+
+
       <div className="one-main">
+          <img src={Logo} alt="Logo" className="header-logo" />
         <h1 className="page-title">Mark Attendance</h1>
         
         {/* Scan Method Selection - MAIN PAGE */}

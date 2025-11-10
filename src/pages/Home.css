@@ -1,4 +1,9 @@
-/* Home.css - Modern White & Blue Theme */
+/* Home.css - Modern White & Blue Theme (Responsive-enhanced)
+   NOTE: This file preserves all original class names and styles,
+   adding responsive behavior and small accessibility tweaks.
+*/
+
+/* ---------- Base / Desktop (original rules preserved) ---------- */
 .home-container {
   display: flex;
   min-height: 100vh;
@@ -6,6 +11,7 @@
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+/* Sidenav */
 .sidenav {
   width: 280px;
   height: 100vh;
@@ -66,6 +72,7 @@
   display: block;
 }
 
+/* Main Content */
 .main-content {
   flex: 1;
   margin-left: 0;
@@ -77,6 +84,7 @@
   margin-left: 280px;
 }
 
+/* Header */
 .header {
   display: flex;
   justify-content: space-between;
@@ -132,6 +140,7 @@
   align-items: center;
 }
 
+/* Buttons */
 .btn {
   padding: 10px 20px;
   border: none;
@@ -208,6 +217,7 @@
   color: white;
 }
 
+/* User List / Table */
 .user-list {
   padding: 30px;
   background: #f8f9fa;
@@ -226,6 +236,14 @@
   border: 1px solid #e9ecef;
 }
 
+/* Make table horizontally scrollable on small screens */
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Maintain original padding & spacing */
 .user-list th,
 .user-list td {
   padding: 16px 20px;
@@ -303,6 +321,7 @@
   font-weight: 600;
 }
 
+/* Modal (original preserved) */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -602,106 +621,11 @@
   border-left-color: #6f42c1;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-  .home-container {
-    flex-direction: column;
-  }
-  
-  .sidenav {
-    width: 100%;
-    height: auto;
-    position: relative;
-    left: 0;
-    display: none;
-  }
-  
-  .sidenav.open {
-    display: block;
-  }
-  
-  .sidenav.open + .main-content {
-    margin-left: 0;
-  }
-  
-  .main-content {
-    margin-left: 0 !important;
-  }
-  
-  .header {
-    flex-direction: column;
-    gap: 15px;
-    padding: 15px;
-  }
-  
-  .search-bar {
-    width: 100%;
-    margin: 10px 0;
-  }
-  
-  .header-actions {
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-  
-  .stats-container {
-    grid-template-columns: 1fr;
-    padding: 0 15px;
-  }
-  
-  .user-list {
-    padding: 15px;
-  }
-  
-  .user-list table {
-    font-size: 12px;
-  }
-  
-  .user-list th,
-  .user-list td {
-    padding: 10px 8px;
-  }
-  
-  .btn {
-    padding: 8px 12px;
-    font-size: 12px;
-  }
-}
-
-@media (max-width: 480px) {
-  .header-actions {
-    flex-direction: column;
-    width: 100%;
-  }
-  
-  .btn {
-    width: 100%;
-    justify-content: center;
-  }
-  
-  .pagination-control .pagination {
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-  
-  .modal {
-    padding: 20px;
-  }
-  
-  .modal-actions {
-    flex-direction: column;
-  }
-  
-  .btn-cancel,
-  .btn-submit {
-    width: 100%;
-  }
-}
-
 /* Loading States */
 .loading {
   opacity: 0.7;
   pointer-events: none;
+  position: relative;
 }
 
 .loading::after {
@@ -723,7 +647,7 @@
   100% { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
-/* Success Messages */
+/* Success / Error messages */
 .success-message {
   background: linear-gradient(135deg, #d4edda, #c3e6cb);
   color: #155724;
@@ -742,4 +666,203 @@
   border-left: 4px solid #dc3545;
   margin: 15px 0;
   font-weight: 600;
+}
+
+/* ---------- Accessibility tweaks ---------- */
+a, button { -webkit-tap-highlight-color: rgba(0,0,0,0); }
+:focus { outline: 3px solid rgba(102,126,234,0.18); outline-offset: 2px; border-radius: 8px; }
+
+/* ---------- Responsive Enhancements ---------- */
+
+/* Small laptops / tablets */
+@media (max-width: 1024px) {
+  .search-bar { width: 55%; max-width: 520px; }
+  .header { padding: 16px 20px; }
+  .main-content { margin-left: 0; } /* keep main full width by default on narrower screens */
+  .sidenav { left: -280px; } /* keep collapsed until toggled */
+  .sidenav.open { left: 0; position: fixed; z-index: 1100; }
+  .sidenav + .main-content { margin-left: 0; }
+  .stats-container { padding: 0 18px; gap: 16px; }
+}
+
+/* Tablets / big phones */
+@media (max-width: 768px) {
+  .home-container {
+    flex-direction: column;
+    min-height: auto;
+  }
+
+  /* Sidenav becomes overlay at top of page when opened */
+  .sidenav {
+    width: 100%;
+    height: auto;
+    position: fixed;
+    left: 0;
+    top: 0;
+    transform: translateY(-100%);
+    transition: transform 0.28s ease;
+    border-radius: 0;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.28);
+    display: none;
+  }
+
+  .sidenav.open {
+    display: block;
+    transform: translateY(0);
+  }
+
+  /* main content full width */
+  .main-content {
+    margin-left: 0 !important;
+    padding-top: 70px; /* space for top header when sidenav overlays */
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .search-bar {
+    width: 100%;
+  }
+
+  .header-actions {
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .btn { padding: 9px 12px; font-size: 13px; }
+
+  /* Tables: keep table but enable horizontal scroll */
+  .table-wrapper { margin: 0 -16px; padding: 0 16px; }
+  .user-list { padding: 18px; min-height: auto; }
+
+  /* Stats: single column */
+  .stats-container { grid-template-columns: 1fr; padding: 0 12px; }
+}
+
+/* Small phones */
+@media (max-width: 480px) {
+  .header {
+    padding: 12px;
+  }
+
+  .search-bar {
+    padding: 8px 12px;
+  }
+
+  .search-icon { margin-right: 8px; }
+
+  .header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn {
+    width: 100%;
+    justify-content: center;
+    padding: 10px;
+    font-size: 14px;
+  }
+
+  .btn-primary, .btn-upload, .btn-register, .btn-export {
+    box-shadow: none;
+  }
+
+  .user-list {
+    padding: 12px;
+  }
+
+  .user-list table {
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .user-list th,
+  .user-list td {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .pagination-control { padding: 0 8px; }
+
+  .modal { padding: 18px; width: 95%; }
+  .modal-actions { flex-direction: column; gap: 10px; }
+  .btn-cancel, .btn-submit { width: 100%; }
+}
+
+/* Very small devices: improve tap targets and reduce heavy effects */
+@media (max-width: 360px) {
+  .search-bar input { font-size: 13px; }
+  .btn { font-size: 13px; padding: 10px; }
+  .user-list th { font-size: 12px; padding: 8px 10px; }
+  .user-list td { font-size: 12px; padding: 8px 10px; }
+}
+
+/* ---------- Table -> Card fallback for super small screens (no JS change required)
+   This uses CSS-only approach: keep the table but render each row as a block using CSS
+   so we don't need to change React. It preserves semantics while being readable.
+*/
+@media (max-width: 520px) {
+  /* Hide header row visually but keep for accessibility */
+  .user-list thead { position: absolute; clip: rect(1px, 1px, 1px, 1px); height: 1px; overflow: hidden; white-space: nowrap; width: 1px; }
+
+  .user-list table, .user-list tbody, .user-list tr, .user-list td {
+    display: block;
+    width: 100%;
+  }
+
+  .user-list tr {
+    margin-bottom: 12px;
+    border-radius: 10px;
+    background: white;
+    padding: 12px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.04);
+  }
+
+  .user-list td {
+    padding: 6px 10px;
+    border-bottom: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+  }
+
+  .user-list td::before {
+    content: attr(data-label);
+    color: #6c757d;
+    font-weight: 600;
+    margin-right: 8px;
+    flex: 1;
+    text-align: left;
+  }
+
+  /* make action buttons wrap nicely */
+  .btn-view, .btn-danger { margin-top: 8px; width: auto; }
+}
+
+
+header.header img {
+  max-width: 200px;   /* Maximum width as per your JSX */
+  width: 100%;        /* Responsive width */
+  height: auto;       /* Maintain aspect ratio */
+  cursor: pointer;    /* Optional: pointer if clickable */
+  margin-right: 2%;
+}
+
+@media (max-width: 768px) {
+
+  header.header img {
+    max-width: 150px;   /* Smaller max width on tablets */
+  }
+}
+
+@media (max-width: 480px) {
+  header.header img {
+    max-width: 120px;  /* Smaller max width on small phones */
+  }
 }
