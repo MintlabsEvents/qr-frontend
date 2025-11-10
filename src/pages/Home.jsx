@@ -13,25 +13,16 @@ const Home = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [users, setUsers] = useState([]); 
   const [attendanceCount, setAttendanceCount] = useState(0);
-  const [giftCount, setGiftCount] = useState(0);
-  const [filteredUsers, setFilteredUsers] = useState([]); // Initialize as empty array
+  const [filteredUsers, setFilteredUsers] = useState([]);
   const [page, setPage] = useState(1);
   const [isExportingQR, setIsExportingQR] = useState(false);
   const USERS_PER_PAGE = 10;
 
-  // Safe array operations - ensure filteredUsers is always an array
-  const sortedUsers = [...(filteredUsers || [])].sort((a, b) => a.id - b.id);
+  // Safe array operations
   const paginatedUsers = [...(filteredUsers || [])]
     .sort((a, b) => a.id - b.id)
     .slice((page - 1) * USERS_PER_PAGE, page * USERS_PER_PAGE);
 
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    mobile: '',
-    designation: '',
-    organization: ''
-  });
   const [isUploading, setIsUploading] = useState(false);
   const navigate = useNavigate();
 
@@ -47,18 +38,18 @@ const Home = () => {
   };
 
   const handleUploadClick = () => {
-    fileInputRef.current.click();
+    fileInputRef.current?.click();
   };
 
   const fetchUsers = async () => {
     try {
       const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/users`);
-      const usersData = response.data || []; // Ensure we get an array
+      const usersData = response.data || [];
       setUsers(usersData);
       setFilteredUsers(usersData);
     } catch (error) {
       console.error('Error fetching users:', error);
-      setUsers([]); // Set to empty array on error
+      setUsers([]);
       setFilteredUsers([]);
     }
   };
@@ -66,13 +57,10 @@ const Home = () => {
   const fetchCounts = async () => {
     try {
       const attendanceRes = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/count/attendance`);
-      const giftRes = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/count/gifts`);
       setAttendanceCount(attendanceRes.data?.count || 0);
-      setGiftCount(giftRes.data?.count || 0);
     } catch (err) {
-      console.error('Failed to fetch counts:', err);
+      console.error('Failed to fetch attendance count:', err);
       setAttendanceCount(0);
-      setGiftCount(0);
     }
   };
 
@@ -80,13 +68,13 @@ const Home = () => {
     const term = e.target.value.toLowerCase();
     setSearchTerm(term);
 
-    // Ensure users is an array before filtering
     const usersArray = users || [];
     const filtered = usersArray.filter((user) =>
       (user.name && user.name.toLowerCase().includes(term)) ||
       (user.email && user.email.toLowerCase().includes(term)) ||
       (user.mobile && user.mobile.toString().includes(term)) ||
-      (user.id && user.id.toString().includes(term))
+      (user.id && user.id.toString().includes(term)) ||
+      (user.organization && user.organization.toLowerCase().includes(term))
     );
 
     setFilteredUsers(filtered);
@@ -109,7 +97,7 @@ const Home = () => {
 
       const link = document.createElement('a');
       link.href = canvas.toDataURL('image/png');
-      link.download = `${user.id}_${user.name}-qrcode.png`;
+      link.download = `${user.id}_${user.name || 'user'}-qrcode.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -136,7 +124,6 @@ const Home = () => {
       // Process in batches to avoid memory issues
       const batchSize = 10;
       let processed = 0;
-      const total = usersArray.length;
 
       for (let i = 0; i < usersArray.length; i += batchSize) {
         const batch = usersArray.slice(i, i + batchSize);
@@ -154,9 +141,8 @@ const Home = () => {
               return new Promise((resolve) => {
                 canvas.toBlob((blob) => {
                   resolve({
-                    fileName: `${user.id}.png`,
+                    fileName: `${user.id}_${user.name || 'user'}.png`,
                     blob: blob,
-                    user: user
                   });
                 }, 'image/png', 1.0);
               });
@@ -222,24 +208,42 @@ const Home = () => {
           headers: {
             'Content-Type': 'multipart/form-data'
           },
-          timeout: 30000
+          timeout: 60000 // 60 seconds timeout
         }
       );
 
-      const usersData = response.data?.users || response.data || [];
-      setUsers(usersData);
-      setFilteredUsers(usersData);
+      // Handle response based on the updated backend structure
+      if (response.data.users) {
+        setUsers(response.data.users);
+        setFilteredUsers(response.data.users);
+      } else if (Array.isArray(response.data)) {
+        // Fallback for older API response format
+        setUsers(response.data);
+        setFilteredUsers(response.data);
+      }
+      
       fetchCounts(); // Refresh counts after upload
-      alert('File uploaded successfully!');
+      
+      // Show success message with summary if available
+      const successMessage = response.data.message || 'File uploaded successfully!';
+      if (response.data.summary) {
+        alert(`${successMessage}\nCreated: ${response.data.summary.created}, Updated: ${response.data.summary.updated}`);
+      } else {
+        alert(successMessage);
+      }
 
     } catch (error) {
       console.error('Error uploading file:', error);
       let errorMessage = 'Error uploading file';
 
-      if (error.response) {
-        errorMessage = error.response.data?.error || errorMessage;
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.code === 'ECONNABORTED') {
+        errorMessage = 'Upload timeout. Please try again with a smaller file.';
       } else if (error.request) {
-        errorMessage = 'No response from server';
+        errorMessage = 'No response from server. Please check your connection.';
       } else {
         errorMessage = error.message;
       }
@@ -265,7 +269,7 @@ const Home = () => {
 
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'users_export.xlsx';
+      a.download = `users_export_${new Date().toISOString().split('T')[0]}.xlsx`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -278,7 +282,7 @@ const Home = () => {
   };
 
   const handleReset = async () => {
-    if (!window.confirm("Are you sure you want to reset all attendance and gift records?")) return;
+    if (!window.confirm("Are you sure you want to reset all attendance records?")) return;
 
     try {
       const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/reset-all`);
@@ -292,7 +296,7 @@ const Home = () => {
   };
 
   const handleResetUser = async (userId) => {
-    if (!window.confirm('Are you sure you want to reset this user\'s attendance and gift records?')) return;
+    if (!window.confirm('Are you sure you want to reset this user\'s attendance records?')) return;
 
     try {
       const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/reset-user`, {
@@ -328,11 +332,6 @@ const Home = () => {
               <i className="fas fa-calendar-day fa-fw me-3"></i><span>Mark Attendance</span>
             </a>
           </li>
-          <li className="sidenav-item">
-            <a className="sidenav-link" onClick={() => navigate('/gifting')}>
-              <i className="fas fa-gift fa-fw me-3"></i><span>Gift Management</span>
-            </a>
-          </li>
         </ul>
       </nav>
 
@@ -350,7 +349,7 @@ const Home = () => {
             </span>
             <input
               type="text"
-              placeholder="Search by ID, name, mobile or email..."
+              placeholder="Search by ID, name, mobile, email or organization..."
               value={searchTerm}
               onChange={handleSearch}
             />
@@ -359,10 +358,6 @@ const Home = () => {
           <div className="header-actions">
             <button className="btn btn-export">
               Attendance Marked: {attendanceCount}
-            </button>
-
-            <button className="btn btn-export">
-              Gift Received: {giftCount}
             </button>
 
             <button className="btn btn-export" onClick={handleReset}>
@@ -392,10 +387,6 @@ const Home = () => {
               accept=".xlsx, .xls"
               style={{ display: 'none' }}
             />
-
-            <button className="btn btn-register" onClick={() => navigate('/register')}>
-              <FaUserPlus /> Registration
-            </button>
           </div>
         </header>
 
@@ -413,8 +404,7 @@ const Home = () => {
                     <th>Designation</th>
                     <th>Organization</th>
                     <th>Attendance</th>
-                    <th>Gift Given</th>
-                    <th>On Site</th>
+                    {/* <th>Attendance Time</th> */}
                     <th>Actions</th>
                     <th>Reset</th>
                   </tr>
@@ -442,29 +432,9 @@ const Home = () => {
                         </div>
                       </td>
 
-                      <td>
-                        <div className="attendance-status">
-                          <span
-                            className={`attendance-circle ${user?.giftGiven === 'Yes' ? 'present' : 'absent'}`}
-                            title={user?.GiftGivenTime ? `Gift Given: ${user.GiftGivenTime}` : 'Not Given'}
-                          ></span>
-                          <span className={`status-text ${user?.giftGiven === 'Yes' ? 'present' : 'absent'}`}>
-                            {user?.giftGiven === 'Yes' ? 'Received' : 'Not Received'}
-                          </span>
-                        </div>
-                      </td>
-
-                      <td>
-                        <div className="attendance-status">
-                          <span
-                            className={`attendance-circle ${user?.onSiteDay ? 'present' : 'absent'}`}
-                            title={user?.onSiteRegistration || 'Not Registered'}
-                          ></span>
-                          <span className={`status-text ${user?.onSiteDay ? 'present' : 'absent'}`}>
-                            {user?.onSiteDay ? 'On Site' : 'Off Site'}
-                          </span>
-                        </div>
-                      </td>
+                      {/* <td>
+                        {user?.AttendanceTime || '-'}
+                      </td> */}
 
                       <td>
                         <button className="btn btn-view" onClick={() => downloadQRCode(user)}>
@@ -499,7 +469,7 @@ const Home = () => {
             </div>
           ) : (
             <div className="no-users">
-              {searchTerm ? 'No users match your search' : 'No users found. Upload an Excel file or register a new user.'}
+              {searchTerm ? 'No users match your search' : 'No users found. Upload an Excel file to get started.'}
             </div>
           )}
         </div>

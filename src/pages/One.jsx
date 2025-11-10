@@ -13,8 +13,10 @@ const One = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [scanner, setScanner] = useState(null);
   const [isSideNavOpen, setIsSideNavOpen] = useState(false);
-  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false); // Add processing state
+  const [showPopup, setShowPopup] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [scannedData, setScannedData] = useState(null);
+  const [attendanceStatus, setAttendanceStatus] = useState(null); // 'not_marked', 'already_marked'
   const navigate = useNavigate();
 
   // Refs for preventing multiple scans
@@ -29,11 +31,10 @@ const One = () => {
     let lastKeyTime = Date.now();
     
     const onKey = (e) => {
-      if (isProcessingRef.current) return; // Prevent new scans while processing
+      if (isProcessingRef.current) return;
       
       const currentTime = Date.now();
       
-      // Reset buffer if too much time passed between keystrokes (not from scanner)
       if (currentTime - lastKeyTime > 100) {
         bufferRef.current = '';
       }
@@ -43,7 +44,7 @@ const One = () => {
         if (bufferRef.current.trim()) {
           const scannedData = bufferRef.current.trim();
           bufferRef.current = '';
-          processQRCode(scannedData);
+          handleQRCodeScan(scannedData);
         }
       } else if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
         bufferRef.current += e.key;
@@ -54,10 +55,9 @@ const One = () => {
     return () => document.removeEventListener('keydown', onKey);
   }, [scanMethod]);
 
-  // Initialize HTML5 QR Code Scanner - FIXED VERSION
+  // Initialize HTML5 QR Code Scanner
   const initializeCameraScanner = () => {
     try {
-      // Clear any existing scanner
       if (scanner) {
         scanner.clear().catch(error => {
           console.log("Scanner clear error:", error);
@@ -67,7 +67,7 @@ const One = () => {
       const html5QrcodeScanner = new Html5QrcodeScanner(
         "qr-reader",
         {
-          fps: 5, // Reduced FPS to prevent multiple scans
+          fps: 5,
           qrbox: { width: 250, height: 250 },
           rememberLastUsedCamera: true,
           supportedScanTypes: []
@@ -77,16 +77,14 @@ const One = () => {
 
       html5QrcodeScanner.render(
         (decodedText) => {
-          // Prevent multiple simultaneous scans
           if (isProcessingRef.current) {
             console.log('Already processing a scan, ignoring...');
             return;
           }
 
           console.log('QR Code scanned:', decodedText);
-          processQRCode(decodedText);
+          handleQRCodeScan(decodedText);
           
-          // Pause scanner temporarily to prevent multiple scans
           if (html5QrcodeScanner && html5QrcodeScanner.pause) {
             html5QrcodeScanner.pause();
           }
@@ -126,37 +124,201 @@ const One = () => {
     setMessageType(type);
   };
 
-  const showSuccessPopupWithTimer = (userData) => {
-    setUser(userData);
-    setShowSuccessPopup(true);
-    
-    // Hide scanner interfaces temporarily
-    if (scanMethod === 'camera' && scanner) {
-      try {
-        scanner.pause();
-      } catch (error) {
-        console.log('Error pausing scanner:', error);
-      }
+  // Reset to main page state
+  const resetToMainPage = () => {
+    // Clear scanner
+    if (scanner) {
+      scanner.clear().catch(error => {
+        console.log("Scanner clear error:", error);
+      });
+      setScanner(null);
     }
     
-    // Auto-close popup after 5 seconds and resume scanning
-    setTimeout(() => {
-      setShowSuccessPopup(false);
-      setUser(null);
-      isProcessingRef.current = false;
+    // Reset all states
+    setIsScanning(false);
+    setScanMethod(null);
+    setShowPopup(false);
+    setUser(null);
+    setScannedData(null);
+    setIsProcessing(false);
+    setAttendanceStatus(null);
+    isProcessingRef.current = false;
+    bufferRef.current = '';
+    
+    // Reset message to initial state
+    setMessage('Select scan method to start...');
+    setMessageType('info');
+  };
+
+  // Handle QR code scan - Check attendance status first
+  const handleQRCodeScan = async (decodedText) => {
+    if (isProcessingRef.current) {
+      console.log('Already processing a scan, ignoring duplicate...');
+      return;
+    }
+
+    const now = Date.now();
+    if (now - lastScanTimeRef.current < 2000) {
+      console.log('Scan too soon after previous scan, ignoring...');
+      return;
+    }
+    lastScanTimeRef.current = now;
+
+    isProcessingRef.current = true;
+    setIsProcessing(true);
+
+    try {
+      setMessage('Processing QR code...');
+      setMessageType('info');
+
+      // Store the scanned data for later submission
+      setScannedData(decodedText);
       
-      // Resume scanning
-      if (scanMethod === 'camera' && scanner) {
-        try {
-          scanner.resume();
-        } catch (error) {
-          console.log('Error resuming scanner:', error);
+      // Parse QR code data to get mongoId
+      let qrData;
+      try {
+        qrData = JSON.parse(decodedText);
+      } catch (e) {
+        // If QR code is not JSON, create basic user object
+        qrData = {
+          id: decodedText,
+          name: 'User from QR Code',
+          organization: 'Unknown Organization'
+        };
+      }
+
+      // First, check if user exists and get their attendance status
+      let userResponse;
+      if (qrData.mongoId) {
+        userResponse = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/user/${qrData.mongoId}`);
+      } else {
+        // Fallback: try to mark attendance directly which will check status
+        userResponse = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/mark-attendance`, {
+          qrCodeData: decodedText
+        });
+      }
+
+      const userData = userResponse.data;
+      
+      // Determine attendance status
+      if (userData.alreadyMarked || userData.Attendance === 'Present') {
+        setAttendanceStatus('already_marked');
+        setUser({
+          id: userData.id || qrData.id,
+          name: userData.name || qrData.name,
+          organization: userData.organization || qrData.organization,
+          attendanceTime: userData.attendanceTime || userData.AttendanceTime,
+          totalRegistrations: userData.totalRegistrations || (userData.attendanceHistory ? userData.attendanceHistory.length : 1)
+        });
+      } else {
+        setAttendanceStatus('not_marked');
+        setUser({
+          id: userData.id || qrData.id,
+          name: userData.name || qrData.name,
+          organization: userData.organization || qrData.organization,
+          isNewScan: true
+        });
+      }
+
+      setShowPopup(true);
+      
+      // Stop camera scanning
+      if (scanMethod === 'camera') {
+        if (scanner) {
+          scanner.clear().catch(error => {
+            console.log("Scanner clear error:", error);
+          });
+          setScanner(null);
         }
       }
       
-      setMessage(scanMethod === 'camera' ? 'Camera ready - Point at QR code' : 'Gun scanner active - Scan QR code');
-      setMessageType('info');
-    }, 5000);
+      setMessage('Please check attendance status in the popup', 'info');
+
+    } catch (err) {
+      console.error('Error processing QR code:', err);
+      if (err.response?.data?.message) {
+        showMessage(err.response.data.message, 'error');
+      } else {
+        showMessage('Error processing QR code', 'error');
+      }
+    } finally {
+      // Reset processing state
+      isProcessingRef.current = false;
+      setIsProcessing(false);
+    }
+  };
+
+// Mark attendance when user clicks submit
+const markAttendance = async () => {
+  if (!scannedData) return;
+
+  setIsProcessing(true);
+  isProcessingRef.current = true;
+
+  try {
+    setMessage('Marking attendance...');
+    
+    const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/mark-attendance`, {
+      qrCodeData: scannedData
+    });
+
+    if (response.data.success) {
+      // Show success message with registration count
+      const successMessage = response.data.user.totalRegistrations 
+        ? `Attendance marked successfully! (Registration #${response.data.user.totalRegistrations})`
+        : 'Attendance marked successfully!';
+      
+      showMessage(successMessage, 'success');
+      
+      // Update popup with success state
+      setUser(prevUser => ({
+        ...prevUser,
+        ...response.data.user,
+        success: true,
+        registrationCount: response.data.user.totalRegistrations || 1
+      }));
+      setAttendanceStatus('marked');
+      
+      // Auto-close popup after 2 seconds
+      setTimeout(() => {
+        resetToMainPage();
+      }, 2000);
+
+    } else if (response.data.alreadyMarked) {
+      // If already marked, show message and auto-close
+      showMessage('Attendance already marked for today', 'info');
+      
+      // Update the popup
+      setUser(prevUser => ({
+        ...prevUser,
+        ...response.data.user
+      }));
+      
+      // Auto-close popup after 2 seconds
+      setTimeout(() => {
+        resetToMainPage();
+      }, 2000);
+      
+    } else {
+      showMessage(response.data.message, 'error');
+    }
+
+  } catch (err) {
+    console.error('Error marking attendance:', err);
+    if (err.response?.data?.message) {
+      showMessage(err.response.data.message, 'error');
+    } else {
+      showMessage('Error marking attendance', 'error');
+    }
+  } finally {
+    isProcessingRef.current = false;
+    setIsProcessing(false);
+  }
+};
+
+  // Close popup without marking attendance
+  const closePopup = () => {
+    resetToMainPage();
   };
 
   const startCameraScan = async () => {
@@ -184,150 +346,18 @@ const One = () => {
   };
 
   const stopCameraScan = () => {
-    if (scanner) {
-      scanner.clear().catch(error => {
-        console.log("Scanner stop error:", error);
-      });
-      setScanner(null);
-    }
-    setIsScanning(false);
-    setScanMethod(null);
-    setMessage('Select scan method to start...');
-    setShowSuccessPopup(false);
-    setUser(null);
-    isProcessingRef.current = false;
+    resetToMainPage();
   };
 
   const startGunScanner = () => {
     setScanMethod('gun');
     setIsScanning(true);
     setMessage('Gun scanner active - Scan QR code');
-    bufferRef.current = ''; // Clear buffer when starting
+    bufferRef.current = '';
   };
 
   const stopGunScanner = () => {
-    setScanMethod(null);
-    setIsScanning(false);
-    setMessage('Select scan method to start...');
-    setShowSuccessPopup(false);
-    setUser(null);
-    bufferRef.current = ''; // Clear buffer when stopping
-    isProcessingRef.current = false;
-  };
-
-  const processQRCode = async (decodedText) => {
-    // Prevent multiple simultaneous processing
-    if (isProcessingRef.current) {
-      console.log('Already processing a scan, ignoring duplicate...');
-      return;
-    }
-
-    // Debounce - prevent scanning the same code multiple times in quick succession
-    const now = Date.now();
-    if (now - lastScanTimeRef.current < 2000) { // 2 second debounce
-      console.log('Scan too soon after previous scan, ignoring...');
-      return;
-    }
-    lastScanTimeRef.current = now;
-
-    isProcessingRef.current = true;
-    setIsProcessing(true);
-
-    try {
-      setMessage('Processing QR code...');
-      setMessageType('info');
-
-      const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/mark-attendance`, {
-        qrCodeData: decodedText
-      });
-
-      if (response.data.success) {
-        showSuccessPopupWithTimer(response.data.user);
-        showMessage(`Attendance marked for ${response.data.user.name || 'User'}`, 'success');
-      } else {
-        showMessage(response.data.message, 'error');
-        // Reset processing state on error
-        isProcessingRef.current = false;
-        setIsProcessing(false);
-        
-        // Resume camera if it's camera scan
-        if (scanMethod === 'camera' && scanner) {
-          try {
-            scanner.resume();
-          } catch (error) {
-            console.log('Error resuming scanner after error:', error);
-          }
-        }
-      }
-
-    } catch (err) {
-      console.error('Error:', err);
-      if (err.response?.data?.message) {
-        showMessage(err.response.data.message, 'error');
-      } else if (err.code === 'NETWORK_ERROR') {
-        showMessage('Network error - Please check your connection', 'error');
-      } else {
-        showMessage('Invalid QR Code or server error', 'error');
-      }
-      
-      // Reset processing state on error
-      isProcessingRef.current = false;
-      setIsProcessing(false);
-      
-      // Resume camera if it's camera scan
-      if (scanMethod === 'camera' && scanner) {
-        try {
-          scanner.resume();
-        } catch (error) {
-          console.log('Error resuming scanner after error:', error);
-        }
-      }
-    }
-  };
-
-  // Test with sample QR data
-  const testScan = () => {
-    if (isProcessingRef.current) {
-      console.log('Already processing, please wait...');
-      return;
-    }
-    
-    const testQRData = JSON.stringify({
-      mongoId: "691176eebf220e2cba034788",
-      id: 1,
-      timestamp: Date.now()
-    });
-    processQRCode(testQRData);
-  };
-
-  // Manual QR code input for testing
-  const manualQRInput = () => {
-    if (isProcessingRef.current) {
-      alert('Please wait, currently processing a scan...');
-      return;
-    }
-    
-    const qrData = prompt('Enter QR code data manually:');
-    if (qrData) {
-      processQRCode(qrData);
-    }
-  };
-
-  // Close popup manually
-  const closePopup = () => {
-    setShowSuccessPopup(false);
-    setUser(null);
-    isProcessingRef.current = false;
-    setIsProcessing(false);
-    
-    if (scanMethod === 'camera' && scanner) {
-      try {
-        scanner.resume();
-      } catch (error) {
-        console.log('Error resuming scanner:', error);
-      }
-    }
-    setMessage(scanMethod === 'camera' ? 'Camera ready - Point at QR code' : 'Gun scanner active - Scan QR code');
+    resetToMainPage();
   };
 
   return (
@@ -345,11 +375,6 @@ const One = () => {
               <i className="fas fa-home fa-fw me-3"></i><span>Home</span>
             </a>
           </li>
-          <li className="sidenav-item">
-            <a className="sidenav-link" onClick={() => navigate('/gifting')}>
-              <i className="fas fa-gift fa-fw me-3"></i><span>Gift Management</span>
-            </a>
-          </li>
         </ul>
       </nav>
 
@@ -361,21 +386,11 @@ const One = () => {
       <div className="one-main">
         <h1 className="page-title">Mark Attendance</h1>
         
-        {/* Scan Method Selection */}
-        {!scanMethod && !showSuccessPopup && (
+        {/* Scan Method Selection - MAIN PAGE */}
+        {!scanMethod && !showPopup && (
           <div className="scan-method-selection">
             <h2>Select Scan Method</h2>
             <div className="method-buttons">
-              <button 
-                className="method-btn gun-scanner-btn" 
-                onClick={startGunScanner}
-                disabled={isProcessing}
-              >
-                <FaBarcode className="method-icon" />
-                <span>Gun Scanner</span>
-                <small>Hardware barcode scanner</small>
-                {isProcessing && <div className="processing-overlay">Processing...</div>}
-              </button>
               <button 
                 className="method-btn camera-btn" 
                 onClick={startCameraScan}
@@ -383,45 +398,25 @@ const One = () => {
               >
                 <FaCamera className="method-icon" />
                 <span>Camera Scan</span>
-                <small>Device camera</small>
-                {isProcessing && <div className="processing-overlay">Processing...</div>}
-              </button>
-            </div>
-
-            {/* Test Buttons for Development */}
-            <div className="test-buttons">
-              <button 
-                className="test-btn" 
-                onClick={testScan}
-                disabled={isProcessing}
-              >
-                <FaQrcode /> {isProcessing ? 'Processing...' : 'Test Scan'}
-              </button>
-              <button 
-                className="test-btn manual-btn" 
-                onClick={manualQRInput}
-                disabled={isProcessing}
-              >
-                <FaQrcode /> {isProcessing ? 'Processing...' : 'Manual Input'}
+                <small>Click to open camera and scan QR code</small>
               </button>
             </div>
           </div>
         )}
 
         {/* Active Scanning Interface - Hidden when popup is shown */}
-        {scanMethod && !showSuccessPopup && (
+        {scanMethod && !showPopup && (
           <div className="active-scanning">
             <div className="scanning-header">
               <h2>
                 {scanMethod === 'gun' ? '🔫 Gun Scanner Active' : '📷 Camera Scanner Active'}
-                {isProcessing && ' (Processing...)'}
               </h2>
               <button 
                 className="stop-scan-btn"
                 onClick={scanMethod === 'gun' ? stopGunScanner : stopCameraScan}
                 disabled={isProcessing}
               >
-                {isProcessing ? 'Processing...' : 'Stop Scanning'}
+                Stop Scanning
               </button>
             </div>
 
@@ -430,20 +425,7 @@ const One = () => {
               <div className="camera-container">
                 <div id="qr-reader" className="qr-reader"></div>
                 <div className="camera-instructions">
-                  {isProcessing && (
-                    <div className="processing-message">
-                      <p>⏳ Processing scan... Please wait</p>
-                    </div>
-                  )}
-                  <div className="camera-troubleshoot">
-                    <button 
-                      onClick={manualQRInput} 
-                      className="troubleshoot-btn"
-                      disabled={isProcessing}
-                    >
-                      {isProcessing ? 'Processing...' : 'Use Manual Input'}
-                    </button>
-                  </div>
+                  <p>Point your camera at the QR code to scan</p>
                 </div>
               </div>
             )}
@@ -453,13 +435,8 @@ const One = () => {
               <div className="gun-scanner-instructions">
                 <div className="instruction-box">
                   <div className="scanner-status-indicator">
-                    <div className={`status-light ${isProcessing ? 'processing' : 'active'}`}></div>
-                    <span>
-                      {isProcessing 
-                        ? 'Processing scan... Please wait' 
-                        : 'Scanner is active and listening for input...'
-                      }
-                    </span>
+                    <div className="status-light active"></div>
+                    <span>Scanner is active and listening for input...</span>
                   </div>
                 </div>
               </div>
@@ -468,7 +445,7 @@ const One = () => {
         )}
 
         {/* Status Message */}
-        {!showSuccessPopup && (
+        {!showPopup && (
           <div className={`scanner-status ${messageType}`}>
             <div className="status-content">
               <div className={`status-icon ${messageType}`}>
@@ -481,27 +458,55 @@ const One = () => {
           </div>
         )}
 
-        {/* Success Popup - Centered Modal */}
-        {showSuccessPopup && user && (
-          <div className="success-popup-overlay">
-            <div className="success-popup">
+        {/* Single Popup */}
+        {showPopup && user && (
+          <div className="popup-overlay">
+            <div className="popup">
               <div className="popup-header">
-                <h2>✅ Attendance Marked Successfully!</h2>
-                <button className="close-popup" onClick={closePopup}>
-                  <FaTimes />
-                </button>
+                <h2>
+                  {attendanceStatus === 'already_marked' ? 'Attendance Already Marked' : 
+                   attendanceStatus === 'marked' ? '✅ Success!' : 'Welcome!'}
+                </h2>
               </div>
               
               <div className="popup-content">
-                <div className="user-avatar">
-                  <div className="avatar-placeholder">
-                    {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                {/* Attendance Status Message */}
+                {attendanceStatus === 'already_marked' && (
+                  <div className="already-marked-notice">
+                    <div className="already-marked-icon">⚠️</div>
+                    <p className="already-marked-text">Attendance Already Marked</p>
+                    <p className="already-marked-subtext">This user has already registered today</p>
                   </div>
-                </div>
-                
+                )}
+
+                {attendanceStatus === 'not_marked' && (
+                  <div className="welcome-notice">
+                    <div className="welcome-icon">👋</div>
+                    <p className="welcome-text">Welcome!</p>
+                    <p className="welcome-subtext">Please submit to mark attendance</p>
+                  </div>
+                )}
+
+                {/* Success Message */}
+                {attendanceStatus === 'marked' && (
+                  <div className="success-message">
+                    <p className="success-text">
+                      Attendance marked successfully!
+                      {user.registrationCount && (
+                        <span className="registration-count">
+                          (Registration #{user.registrationCount})
+                        </span>
+                      )}
+                    </p>
+                    <p className="success-subtext">
+                      Returning to scanner...
+                    </p>
+                  </div>
+                )}
+
                 <div className="user-details-popup">
                   <div className="detail-item">
-                    <span className="detail-label">ID:</span>
+                    <span className="detail-label">User ID:</span>
                     <span className="detail-value">{user.id}</span>
                   </div>
                   <div className="detail-item">
@@ -512,20 +517,75 @@ const One = () => {
                     <span className="detail-label">Organization:</span>
                     <span className="detail-value">{user.organization || 'N/A'}</span>
                   </div>
+                  
+                  {/* Show attendance time if available */}
                   {user.attendanceTime && (
                     <div className="detail-item">
-                      <span className="detail-label">Time:</span>
+                      <span className="detail-label">Attendance Time:</span>
                       <span className="detail-value">{user.attendanceTime}</span>
                     </div>
                   )}
+                  
+                  {/* Show registration count if available */}
+                  {/* {user.totalRegistrations && (
+                    <div className="detail-item highlight">
+                      <span className="detail-label">Total Registrations:</span>
+                      <span className="detail-value highlight-value">
+                        {user.totalRegistrations}
+                      </span>
+                    </div>
+                  )} */}
                 </div>
 
-                <div className="popup-timer">
-                  <div className="timer-bar">
-                    <div className="timer-progress"></div>
-                  </div>
-                  <p>Continuing scanning in 5 seconds...</p>
-                </div>
+{/* Show buttons based on attendance status */}
+{attendanceStatus === 'not_marked' && (
+  <div className="popup-actions">
+    <button 
+      className="submit-attendance-btn"
+      onClick={markAttendance}
+      disabled={isProcessing}
+    >
+      {isProcessing ? 'Marking Attendance...' : 'Submit Attendance'}
+    </button>
+    <button 
+      className="cancel-btn"
+      onClick={closePopup}
+      disabled={isProcessing}
+    >
+      Cancel
+    </button>
+  </div>
+)}
+
+{attendanceStatus === 'already_marked' && (
+  <div className="popup-actions">
+    <button 
+      className="submit-attendance-btn"
+      onClick={markAttendance}
+      disabled={isProcessing}
+    >
+      {isProcessing ? 'Marking Attendance...' : 'Submit Attendance'}
+    </button>
+    <button 
+      className="close-btn"
+      onClick={closePopup}
+      disabled={isProcessing}
+    >
+      Close
+    </button>
+  </div>
+)}
+
+{attendanceStatus === 'marked' && (
+  <div className="popup-actions">
+    <button 
+      className="close-btn"
+      onClick={closePopup}
+    >
+      Close
+    </button>
+  </div>
+)}
               </div>
             </div>
           </div>
