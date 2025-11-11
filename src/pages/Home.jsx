@@ -326,7 +326,7 @@ const Home = () => {
   return (
     <div className="home-container">
       {/* Side Navigation */}
-      <nav id="sidenav-1" className={`sidenav ${isSideNavOpen ? 'open' : ''}`}>
+      {/* <nav id="sidenav-1" className={`sidenav ${isSideNavOpen ? 'open' : ''}`}>
         <ul className="sidenav-menu">
           <li className="sidenav-item">
             <a className="sidenav-link" onClick={() => navigate('/attendance')}>
@@ -334,15 +334,15 @@ const Home = () => {
             </a>
           </li>
         </ul>
-      </nav>
+      </nav> */}
 
       {/* Main Content */}
       <div className="main-content">
         {/* Header */}
         <header className="header">
-          <button className="btn btn-primary" onClick={toggleSideNav} aria-controls="#sidenav-1" aria-haspopup="true">
+          {/* <button className="btn btn-primary" onClick={toggleSideNav} aria-controls="#sidenav-1" aria-haspopup="true">
             <FaBars />
-          </button>
+          </button> */}
 
         <img src={Logo} alt="Logo" className="header-logo" />
 
