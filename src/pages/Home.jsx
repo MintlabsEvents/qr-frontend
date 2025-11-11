@@ -402,11 +402,11 @@ const Home = () => {
                 <thead>
                   <tr>
                     <th>ID</th>
-                    <th>Name</th>
-                    <th>Email</th>
+                    <th>CP Firm Name</th>
+                    {/* <th>Email</th>
                     <th>Mobile</th>
                     <th>Designation</th>
-                    <th>Organization</th>
+                    <th>Organization</th> */}
                     <th>Attendance</th>
                     {/* <th>Attendance Time</th> */}
                     <th>Actions</th>
@@ -419,10 +419,10 @@ const Home = () => {
                     <tr key={user._id || index}>
                       <td>{getUserDisplayValue(user, 'id')}</td>
                       <td>{getUserDisplayValue(user, 'name')}</td>
-                      <td>{getUserDisplayValue(user, 'email')}</td>
+                      {/* <td>{getUserDisplayValue(user, 'email')}</td>
                       <td>{getUserDisplayValue(user, 'mobile')}</td>
                       <td>{getUserDisplayValue(user, 'designation')}</td>
-                      <td>{getUserDisplayValue(user, 'organization')}</td>
+                      <td>{getUserDisplayValue(user, 'organization')}</td> */}
 
                       <td>
                         <div className="attendance-status">
